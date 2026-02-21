@@ -14,8 +14,7 @@ body {
     border-radius: 12px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     width: 320px;
-    text-align: center; /* Centra el texto y el título */
-}
+    text-align: center; 
 
 h2 {
     margin-top: 0;
@@ -25,7 +24,7 @@ h2 {
 }
 
 .input-group {
-    text-align: left; /* Las etiquetas quedan alineadas a la izquierda */
+    text-align: left; 
     margin-bottom: 15px;
 }
 
@@ -41,7 +40,7 @@ input {
     padding: 12px;
     border: 1px solid #ddd;
     border-radius: 6px;
-    box-sizing: border-box; /* Fundamental para que no se salga del borde */
+    box-sizing: border-box;
 }
 
 button {
