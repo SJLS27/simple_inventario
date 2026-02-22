@@ -4,24 +4,55 @@
     <meta charset="UTF-8">
     <title>Login</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- En desarrollo Tauri inyecta la API; no es necesario cargar tauri.js manualmente.
+         Si usas servidor de desarrollo que expone tauri.js, conserva la línea; si no, dejar como fallback. -->
+    <!-- Sin mocks: usar backend real de Tauri en dev con `cargo tauri dev` -->
+    <!-- scripts moved to main.js -->
 </head>
 <body>
 
-    <form class="login-card">
+    <form id="login-form" class="login-card">
         <h2>Buenos días, bienvenido</h2>
         
         <div class="input-group">
             <label for="u">Usuario:</label>
-            <input type="text" id="u" name="user" placeholder="Escribe tu usuario aquí">
+            <input type="text" id="u" name="user" placeholder="Escribe tu usuario aquí" required>
         </div>
 
         <div class="input-group">
             <label for="p">Contraseña:</label>
-            <input type="password" id="p" name="pass" placeholder="Y acá la contraseña">
+            <input type="password" id="p" name="pass" placeholder="Y acá la contraseña" required>
         </div>
 
         <button type="submit">Entrar</button>
+        <button id="btn-close" type="button">Cerrar</button>
     </form>
 
+    <div id="mensaje" style="margin-top: 20px;"></div>
+
+    <!-- scripts moved to main.js -->
+    <script src="main.js"></script>
+
 </body>
+
+<!-- Banner y script de diagnóstico para ayudar cuando la página se abra fuera de Tauri -->
+<div id="tauri-missing-banner" style="display:none;position:fixed;left:0;right:0;top:0;background:#ffebee;color:#b71c1c;padding:12px;text-align:center;z-index:9999;font-family:sans-serif;">
+    La API de Tauri no está disponible en este contexto. Ejecuta la app con <code>cargo tauri dev</code> o sirve esta página desde Tauri.
+</div>
+
+<script>
+    (function(){
+        var isTauri = typeof window.__TAURI__ !== 'undefined' || typeof window.tauri !== 'undefined';
+        if (!isTauri) {
+            var b = document.getElementById('tauri-missing-banner');
+            if (b) b.style.display = 'block';
+            console.error('Tauri API missing: window.__TAURI__ / window.tauri is undefined. Ejecuta: cargo tauri dev (o revisa webkit2gtk).');
+            console.info('navigator.userAgent =', navigator.userAgent);
+        } else {
+            console.info('Tauri API disponible en webview.');
+        }
+        // Exportar helper global opcional
+        window.isTauri = function(){ return isTauri; };
+    })();
+</script>
 </html>

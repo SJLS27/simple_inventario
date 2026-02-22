@@ -1,0 +1,75 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #f0f2f5;
+    font-family: sans-serif;
+}
+
+/* Dock en la izquierda */
+form {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    width: 20%;
+    background: white;
+    box-shadow: 2px 0 15px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 0;
+    gap: 10px;
+}
+
+
+
+button {
+    width: 80%;          
+    height: 60px;         
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 10px;
+}
+
+button:hover {
+    background-color: #0056b3;
+    transform: scale(1.1);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+button:active {
+    transform: scale(0.95);
+}
+
+/* Botón Atrás naranja y abajo */
+button:nth-child(4) {
+    background-color: #ff9800;
+    margin-top: auto;
+}
+
+button:nth-child(4):hover {
+    background-color: #e68900;
+}
+
+/* Botón Cerrar rojo */
+button:last-child {
+    background-color: #dc3545;
+}
+
+button:last-child:hover {
+    background-color: #c82333;
+}

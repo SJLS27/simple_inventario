@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Menú Principal</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <form>
+        <h2>Menú</h2>
+        <button id="btn-inventario" type="button" title="Inventario">Inventario</button>
+        <button id="btn-ventas" type="button" title="Ventas">Ventas</button>
+        <button id="btn-usuarios" type="button" title="Usuarios">Usuarios</button>
+        <button id="btn-atras" type="button" title="Atrás">Atrás</button>
+        <button id="btn-cerrar" type="button" title="Cerrar">Cerrar</button>
+        <div id="admin-status" style="margin-top:12px;font-weight:bold;"></div>
+    </form>
+    <script>
+        // Leer bandera de admin desde sessionStorage
+        (function(){
+            var isAdmin = null;
+            try {
+                isAdmin = sessionStorage.getItem('is_admin');
+            } catch (e) {
+                console.warn('No se pudo leer sessionStorage:', e);
+            }
+            var statusEl = document.getElementById('admin-status');
+            var btnUsuarios = document.getElementById('btn-usuarios');
+            if (isAdmin === '1') {
+                if (statusEl) statusEl.textContent = 'Estado: Administrador';
+                if (btnUsuarios) btnUsuarios.disabled = false;
+            } else if (isAdmin === '0') {
+                if (statusEl) statusEl.textContent = 'Estado: Usuario';
+                if (btnUsuarios) btnUsuarios.disabled = true;
+            } else {
+                if (statusEl) statusEl.textContent = 'Estado: desconocido (inicia sesión)';
+                if (btnUsuarios) btnUsuarios.disabled = true;
+            }
+
+            // Acciones de botones simples
+            var btnAtras = document.getElementById('btn-atras');
+            if (btnAtras) btnAtras.addEventListener('click', function(){ window.location.href = '../index.html'; });
+            var btnCerrar = document.getElementById('btn-cerrar');
+            if (btnCerrar) btnCerrar.addEventListener('click', function(){ window.close(); });
+        })();
+    </script>
+</body>
+</html>

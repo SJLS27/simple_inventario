@@ -1,0 +1,6 @@
+[workspace]
+members = ["src-tauri"]
+resolver = "2"
+
+# This workspace file allows running `cargo` commands from the project root.
+# The actual crate lives in `src-tauri/Cargo.toml` which remains unchanged.
