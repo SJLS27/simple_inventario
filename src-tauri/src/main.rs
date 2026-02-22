@@ -128,15 +128,15 @@ fn crear_archivo_admin(es_admin: bool) {
     let admin_value = if es_admin { 1 } else { 0 };
     let contenido = format!("admin={}", admin_value);
 
-    // Guardar en la carpeta del proyecto (directorio de trabajo actual)
-    let ruta = env::current_dir()
-        .unwrap_or_else(|_| PathBuf::from("."))
-        .join("admin.conf");
+    // Escribir en un directorio seguro que normalmente no está observado por herramientas
+    // de desarrollo (por ejemplo, `cargo tauri dev`). Usamos el directorio temporal del
+    // sistema para evitar que la creación/actualización del archivo dispare recargas.
+    let ruta = env::temp_dir().join("ventas_admin.conf");
 
     if let Err(e) = fs::write(&ruta, contenido) {
-        println!("[warn] no se pudo escribir admin.conf: {}", e);
+        println!("[warn] no se pudo escribir ventas_admin.conf en {}: {}", ruta.display(), e);
     } else {
-        println!("[debug] admin.conf escrito en {}", ruta.display());
+        println!("[debug] ventas_admin.conf escrito en {}", ruta.display());
     }
 }
 
