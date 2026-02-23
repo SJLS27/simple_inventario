@@ -3,6 +3,7 @@
 ## Overview
 This repo is a simple desktop inventory system built with HTML/CSS/JS for the UI and Rust (Tauri) for backend logic and SQLite access.
 
+
 ## Architecture map
 - Frontend (static): `src/index.html`, `src/main.js`, `src/styles.css`
 - Menu pages: `src/menu/` (subfolders `inventario/`, `ventas/`)
