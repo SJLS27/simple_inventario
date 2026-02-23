@@ -1,0 +1,173 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: sans-serif;
+    background-color: #f5f6f8;
+    color: #1f2933;
+    padding: 24px;
+}
+
+.page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.page-header h1 {
+    font-size: 1.8rem;
+    margin-bottom: 6px;
+}
+
+.role-indicator {
+    font-weight: 600;
+    color: #4b5563;
+}
+
+.search-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 280px;
+}
+
+.search-label {
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+#search {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    font-size: 0.95rem;
+}
+
+.treeview {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    margin-bottom: 20px;
+}
+
+.treeview table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.treeview thead th {
+    text-align: left;
+    padding: 10px;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6b7280;
+}
+
+.treeview tbody tr {
+    border-top: 1px solid #eef2f7;
+}
+
+.treeview tbody td {
+    padding: 10px;
+    font-size: 0.95rem;
+}
+
+.treeview tbody td.tree-id {
+    font-weight: 600;
+    color: #111827;
+}
+
+.treeview input {
+    width: 100%;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    font-size: 0.95rem;
+}
+
+.treeview input:disabled {
+    background-color: #f3f4f6;
+    border-color: #e5e7eb;
+    color: #6b7280;
+}
+
+.status {
+    min-height: 18px;
+    font-size: 0.9rem;
+    color: #ef4444;
+}
+
+.hidden {
+    display: none;
+}
+
+.add-product {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    margin-bottom: 20px;
+}
+
+.add-product h2 {
+    font-size: 1.1rem;
+    margin-bottom: 12px;
+}
+
+.add-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    align-items: end;
+}
+
+.add-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: #4b5563;
+}
+
+.add-grid input {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    font-size: 0.95rem;
+}
+
+#btn-add {
+    height: 40px;
+    border-radius: 10px;
+    border: none;
+    font-weight: 600;
+    background-color: #16a34a;
+    color: white;
+    cursor: pointer;
+}
+
+.page-footer {
+    display: flex;
+    gap: 12px;
+}
+
+.page-footer button {
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    background-color: #2563eb;
+    color: white;
+}
+
+.page-footer button:last-child {
+    background-color: #6b7280;
+}

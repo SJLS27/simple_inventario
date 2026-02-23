@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Inventario</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="page-header">
+        <div>
+            <h1>Inventario</h1>
+            <div id="role-indicator" class="role-indicator"></div>
+        </div>
+        <div class="search-wrapper">
+            <label for="search" class="search-label">Buscar por ID o nombre</label>
+            <input id="search" type="search" placeholder="Ej: 102 o Tornillo">
+        </div>
+    </header>
+
+    <section id="add-product" class="add-product">
+        <h2>Agregar producto</h2>
+        <div class="add-grid">
+            <label>
+                ID
+                <input id="add-id" type="number" min="1" placeholder="Ej: 100">
+            </label>
+            <label>
+                Nombre
+                <input id="add-nombre" type="text" placeholder="Ej: Tornillo">
+            </label>
+            <label>
+                Precio
+                <input id="add-precio" type="number" step="0.01" min="0" placeholder="Ej: 12.50">
+            </label>
+            <label>
+                Cantidad
+                <input id="add-cantidad" type="number" step="1" min="0" placeholder="Ej: 20">
+            </label>
+            <button id="btn-add" type="button">Agregar</button>
+        </div>
+        <div id="add-status" class="status"></div>
+    </section>
+
+    <section class="treeview" aria-live="polite">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Precio</th>
+                    <th>Cantidad</th>
+                </tr>
+            </thead>
+            <tbody id="inventario-body"></tbody>
+        </table>
+    </section>
+
+    <div id="status" class="status"></div>
+
+    <footer class="page-footer">
+        <button id="btn-volver" type="button">Volver al menu</button>
+        <button id="btn-recargar" type="button">Recargar</button>
+    </footer>
+
+    <script src="main.js"></script>
+</body>
+</html>
