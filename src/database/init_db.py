@@ -27,6 +27,16 @@ CREATE TABLE IF NOT EXISTS "users" (
 );
 '''
 
+CREATE_INVENTARIO_SQL = r'''
+CREATE TABLE IF NOT EXISTS "inventario" (
+    "id" INTEGER NOT NULL UNIQUE,
+    "nombre_producto" TEXT NOT NULL,
+    "precio_producto" TEXT NOT NULL,
+    "cantidad_producto" TEXT,
+    PRIMARY KEY("id","nombre_producto")
+);
+'''
+
 def ensure_db_exists(path: Path):
     if not path.exists():
         # Create empty database file (sqlite3 will create on connect, but touch for clarity)
@@ -37,9 +47,9 @@ def ensure_db_exists(path: Path):
 
 def create_table(conn: sqlite3.Connection):
     cur = conn.cursor()
-    cur.executescript(CREATE_USERS_SQL)
+    cur.executescript(CREATE_USERS_SQL + CREATE_INVENTARIO_SQL)
     conn.commit()
-    print("[info] Tabla 'users' creada o ya existente.")
+    print("[info] Tablas 'users' e 'inventario' creadas o ya existentes.")
 
 
 def add_user(conn: sqlite3.Connection, name: str, password: str, correo: str, admin: int):

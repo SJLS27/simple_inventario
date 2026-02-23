@@ -1,13 +1,7 @@
-// main.js - moved from inline scripts in index.html
-// Handles Tauri invocation, login form binding, sessionStorage admin flag and diagnostics
-
-// Tauri v2: robust invoke helper (uses window.__TAURI__.core.invoke when available)
 function tauriInvoke(command, payload) {
-    // modern: __TAURI__ with core.invoke (Tauri v2)
     if (window.__TAURI__ && window.__TAURI__.core && typeof window.__TAURI__.core.invoke === 'function') {
         return window.__TAURI__.core.invoke(command, payload);
     }
-    // fallback older: window.__TAURI__.tauri.invoke or window.tauri.invoke
     if (window.__TAURI__ && window.__TAURI__.tauri && typeof window.__TAURI__.tauri.invoke === 'function') {
         return window.__TAURI__.tauri.invoke(command, payload);
     }
@@ -19,13 +13,49 @@ function tauriInvoke(command, payload) {
     return Promise.reject(new Error(msg));
 }
 
-// Helper to detect Tauri presence
 function isTauriAvailable() {
     return (typeof window.__TAURI__ !== 'undefined' && (window.__TAURI__.core || window.__TAURI__.tauri)) || (typeof window.tauri !== 'undefined');
 }
 
-// Bind login form
+async function closeWindow() {
+    try {
+        if (isTauriAvailable()) {
+            await tauriInvoke('cerrar_ventana');
+            return;
+        }
+        if (window.__TAURI__ && window.__TAURI__.window) {
+            if (typeof window.__TAURI__.window.getCurrentWebviewWindow === 'function') {
+                await window.__TAURI__.window.getCurrentWebviewWindow().close();
+                return;
+            }
+            if (typeof window.__TAURI__.window.getCurrentWindow === 'function') {
+                await window.__TAURI__.window.getCurrentWindow().close();
+                return;
+            }
+            return;
+        }
+    } catch (e) {
+        console.warn('No se pudo cerrar con la API de Tauri:', e);
+    }
+    window.close();
+}
+
+function getStoredAdminFlag() {
+    try {
+        return sessionStorage.getItem('is_admin');
+    } catch (e) {
+        console.warn('No se pudo leer sessionStorage:', e);
+        return null;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    var existingAdminFlag = getStoredAdminFlag();
+    if (existingAdminFlag === '0' || existingAdminFlag === '1') {
+        window.location.replace('menu/index.html');
+        return;
+    }
+
     const form = document.getElementById('login-form');
     const btnClose = document.getElementById('btn-close');
     const mensaje = document.getElementById('mensaje');
@@ -36,8 +66,6 @@ document.addEventListener('DOMContentLoaded', function() {
         event.preventDefault();
         const usuario = document.getElementById('u').value;
         const contrasena = document.getElementById('p').value;
-
-        // Check Tauri availability
         if (!isTauriAvailable()) {
             mensaje.innerHTML = `<p style="color: red;">La API de Tauri no está disponible. Ejecuta la app con <code>cargo tauri dev</code> o sirve esta página desde Tauri.</p>`;
             return;
@@ -52,7 +80,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 } catch (e) {
                     console.warn('No se pudo usar sessionStorage:', e);
                 }
-                setTimeout(() => { window.location.href = 'menu/index.html'; }, 700);
+                setTimeout(() => { window.location.replace('menu/index.html'); }, 700);
             } else {
                 mensaje.innerHTML = `<p style="color: red;">✗ ${resultado.message}</p>`;
             }
@@ -61,9 +89,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    if (btnClose) btnClose.addEventListener('click', function(){ window.close(); });
-
-    // Diagnostic banner for non-tauri contexts
+    if (btnClose) btnClose.addEventListener('click', function(){ closeWindow(); });
     (function(){
         var isTauri = isTauriAvailable();
         if (!isTauri) {

@@ -47,6 +47,14 @@ struct LoginResponse {
     is_admin: bool,
 }
 
+#[derive(Serialize, Deserialize)]
+struct InventarioItem {
+    id: i64,
+    nombre: String,
+    precio: f64,
+    cantidad: i64,
+}
+
 #[tauri::command]
 fn validar_login(usuario: String, contrasena: String) -> LoginResponse {
     // Determinar la ruta a la base de datos usando búsqueda de candidatos
@@ -124,6 +132,78 @@ fn validar_login(usuario: String, contrasena: String) -> LoginResponse {
     }
 }
 
+#[tauri::command]
+fn listar_inventarios() -> Result<Vec<InventarioItem>, String> {
+    let db_path = find_db_path();
+    let conn = Connection::open(&db_path)
+        .map_err(|e| format!("Error al conectar: {} (ruta={})", e, db_path.display()))?;
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, nombre_producto AS nombre, CAST(precio_producto AS REAL) AS precio, CAST(cantidad_producto AS INTEGER) AS cantidad \
+             FROM inventario ORDER BY id, nombre_producto, precio_producto, cantidad_producto",
+        )
+        .map_err(|e| format!("Error en la consulta: {}", e))?;
+
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(InventarioItem {
+                id: row.get(0)?,
+                nombre: row.get(1)?,
+                precio: row.get(2)?,
+                cantidad: row.get(3)?,
+            })
+        })
+        .map_err(|e| format!("Error al leer inventarios: {}", e))?;
+
+    let mut items = Vec::new();
+    for row in rows {
+        items.push(row.map_err(|e| format!("Error en fila: {}", e))?);
+    }
+
+    Ok(items)
+}
+
+#[tauri::command]
+fn actualizar_inventario(id: i64, nombre: String, precio: f64, cantidad: i64) -> Result<(), String> {
+    let db_path = find_db_path();
+    let conn = Connection::open(&db_path)
+        .map_err(|e| format!("Error al conectar: {} (ruta={})", e, db_path.display()))?;
+
+    let affected = conn
+        .execute(
+            "UPDATE inventario SET nombre_producto = ?1, precio_producto = ?2, cantidad_producto = ?3 WHERE id = ?4",
+            rusqlite::params![nombre, precio, cantidad, id],
+        )
+        .map_err(|e| format!("Error al actualizar: {}", e))?;
+
+    if affected == 0 {
+        return Err("No se encontro el registro para actualizar".to_string());
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+fn cerrar_ventana(window: tauri::Window) -> Result<(), String> {
+    window.close().map_err(|e| format!("Error al cerrar la ventana: {}", e))
+}
+
+#[tauri::command]
+fn insertar_inventario(id: i64, nombre: String, precio: f64, cantidad: Option<i64>) -> Result<(), String> {
+    let db_path = find_db_path();
+    let conn = Connection::open(&db_path)
+        .map_err(|e| format!("Error al conectar: {} (ruta={})", e, db_path.display()))?;
+
+    conn.execute(
+        "INSERT INTO inventario (id, nombre_producto, precio_producto, cantidad_producto) VALUES (?1, ?2, ?3, ?4)",
+        rusqlite::params![id, nombre, precio, cantidad],
+    )
+    .map_err(|e| format!("Error al insertar: {}", e))?;
+
+    Ok(())
+}
+
 fn crear_archivo_admin(es_admin: bool) {
     let admin_value = if es_admin { 1 } else { 0 };
     let contenido = format!("admin={}", admin_value);
@@ -143,7 +223,14 @@ fn crear_archivo_admin(es_admin: bool) {
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![validar_login, greet])
+        .invoke_handler(tauri::generate_handler![
+            validar_login,
+            listar_inventarios,
+            actualizar_inventario,
+            insertar_inventario,
+            cerrar_ventana,
+            greet
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -38,10 +38,45 @@
             }
 
             // Acciones de botones simples
+            var btnInventario = document.getElementById('btn-inventario');
+            if (btnInventario) btnInventario.addEventListener('click', function(){ window.location.href = 'inventario/index.html'; });
+            var btnVentas = document.getElementById('btn-ventas');
+            if (btnVentas) btnVentas.addEventListener('click', function(){ window.location.href = 'ventas/main.html'; });
             var btnAtras = document.getElementById('btn-atras');
-            if (btnAtras) btnAtras.addEventListener('click', function(){ window.location.href = '../index.html'; });
+            if (btnAtras) btnAtras.addEventListener('click', function(){
+                try { sessionStorage.clear(); } catch (e) { console.warn('No se pudo limpiar sessionStorage:', e); }
+                window.location.href = '../index.html';
+            });
             var btnCerrar = document.getElementById('btn-cerrar');
-            if (btnCerrar) btnCerrar.addEventListener('click', function(){ window.close(); });
+            if (btnCerrar) btnCerrar.addEventListener('click', function(){
+                try {
+                    if (window.__TAURI__ && window.__TAURI__.core && typeof window.__TAURI__.core.invoke === 'function') {
+                        window.__TAURI__.core.invoke('cerrar_ventana');
+                        return;
+                    }
+                    if (window.__TAURI__ && window.__TAURI__.tauri && typeof window.__TAURI__.tauri.invoke === 'function') {
+                        window.__TAURI__.tauri.invoke('cerrar_ventana');
+                        return;
+                    }
+                    if (window.tauri && typeof window.tauri.invoke === 'function') {
+                        window.tauri.invoke('cerrar_ventana');
+                        return;
+                    }
+                    if (window.__TAURI__ && window.__TAURI__.window) {
+                        if (typeof window.__TAURI__.window.getCurrentWebviewWindow === 'function') {
+                            window.__TAURI__.window.getCurrentWebviewWindow().close();
+                            return;
+                        }
+                        if (typeof window.__TAURI__.window.getCurrentWindow === 'function') {
+                            window.__TAURI__.window.getCurrentWindow().close();
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('No se pudo cerrar con la API de Tauri:', e);
+                }
+                window.close();
+            });
         })();
     </script>
 </body>

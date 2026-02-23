@@ -11,7 +11,7 @@ def conectar_db():
         return None
 
 def crear_tabla_si_no_existe(conexion):
-    """Crea la tabla users si no existe"""
+    """Crea las tablas users e inventarios si no existen"""
     try:
         cursor = conexion.cursor()
         
@@ -24,9 +24,19 @@ def crear_tabla_si_no_existe(conexion):
                 PRIMARY KEY("name","password","correo electronico","Admin")
             )
         ''')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS "inventario" (
+                "id" INTEGER NOT NULL UNIQUE,
+                "nombre_producto" TEXT NOT NULL,
+                "precio_producto" TEXT NOT NULL,
+                "cantidad_producto" TEXT,
+                PRIMARY KEY("id","nombre_producto")
+            )
+        ''')
         
         conexion.commit()
-        print("✓ Tabla 'users' lista.\n")
+        print("✓ Tablas 'users' e 'inventario' listas.\n")
         
     except sqlite3.Error as e:
         print(f"Error al crear tabla: {e}")
