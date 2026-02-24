@@ -165,6 +165,46 @@
                 };
             }
 
+            function loadVentasPersistidas() {
+                try {
+                    var data = localStorage.getItem('ventas_en_curso');
+                    if (!data) return [];
+                    var parsed = JSON.parse(data);
+                    if (!Array.isArray(parsed)) return [];
+                    return parsed
+                        .filter(function (v) {
+                            return v && v.id != null && v.nombre && Number.isFinite(v.precio) && Number.isFinite(v.cantidad);
+                        })
+                        .map(function (v) {
+                            return {
+                                id: Number(v.id),
+                                nombre: String(v.nombre),
+                                precio: Number(v.precio),
+                                cantidad: Number(v.cantidad)
+                            };
+                        });
+                } catch (e) {
+                    return [];
+                }
+            }
+
+            function saveVentasPersistidas() {
+                try {
+                    localStorage.setItem('ventas_en_curso', JSON.stringify(ventas));
+                } catch (e) {
+                    // ignore storage errors
+                }
+            }
+
+            // Inicializar ventas desde almacenamiento persistido (sesión actual)
+            ventas = loadVentasPersistidas();
+
+            function clearVentas() {
+                ventas = [];
+                renderVentas();
+                saveVentasPersistidas();
+            }
+
             function isSameLocalDay(dateString, referenceDate) {
                 var parsed = new Date(dateString);
                 if (Number.isNaN(parsed.getTime())) return false;
@@ -210,6 +250,14 @@
                     if (!Array.isArray(parsed)) parsed = [];
                     parsed.push(payload);
                     localStorage.setItem('ventas_diarias', JSON.stringify(parsed));
+                } catch (e) {
+                    // ignore storage errors
+                }
+            }
+
+            function limpiarVentasDelDia() {
+                try {
+                    localStorage.setItem('ventas_diarias', JSON.stringify([]));
                 } catch (e) {
                     // ignore storage errors
                 }
@@ -281,6 +329,9 @@
             function renderVentas() {
                 if (!bodyEl) return;
                 bodyEl.innerHTML = '';
+
+                var total = 0;
+
                 if (!ventas.length) {
                     var emptyRow = document.createElement('tr');
                     var emptyCell = document.createElement('td');
@@ -288,24 +339,42 @@
                     emptyCell.textContent = 'No hay ventas registradas.';
                     emptyRow.appendChild(emptyCell);
                     bodyEl.appendChild(emptyRow);
+                } else {
+                    ventas.forEach(function (venta, index) {
+                        var row = document.createElement('tr');
+                        var subtotal = venta.precio * venta.cantidad;
+                        total += subtotal;
+
+                        var removeBtn = document.createElement('button');
+                        removeBtn.type = 'button';
+                        removeBtn.className = 'btn-danger';
+                        removeBtn.textContent = 'Eliminar';
+                        removeBtn.setAttribute('data-idx', index);
+
+                        var tdId = document.createElement('td');
+                        tdId.textContent = venta.id;
+                        var tdNombre = document.createElement('td');
+                        tdNombre.textContent = venta.nombre;
+                        var tdPrecio = document.createElement('td');
+                        tdPrecio.textContent = formatMoney(venta.precio);
+                        var tdCantidad = document.createElement('td');
+                        tdCantidad.textContent = venta.cantidad;
+                        var tdSubtotal = document.createElement('td');
+                        tdSubtotal.textContent = formatMoney(subtotal);
+                        var tdAcciones = document.createElement('td');
+                        tdAcciones.className = 'table-actions';
+                        tdAcciones.appendChild(removeBtn);
+
+                        row.appendChild(tdId);
+                        row.appendChild(tdNombre);
+                        row.appendChild(tdPrecio);
+                        row.appendChild(tdCantidad);
+                        row.appendChild(tdSubtotal);
+                        row.appendChild(tdAcciones);
+
+                        bodyEl.appendChild(row);
+                    });
                 }
-
-                var total = 0;
-                ventas.forEach(function (venta, index) {
-                    var row = document.createElement('tr');
-                    var subtotal = venta.precio * venta.cantidad;
-                    total += subtotal;
-                    var removeBtn = '<button type="button" class="btn-danger" data-idx="' + index + '">Eliminar</button>';
-
-                    row.innerHTML =
-                        '<td>' + venta.id + '</td>' +
-                        '<td>' + venta.nombre + '</td>' +
-                        '<td>' + formatMoney(venta.precio) + '</td>' +
-                        '<td>' + venta.cantidad + '</td>' +
-                        '<td>' + formatMoney(subtotal) + '</td>' +
-                        '<td class="table-actions">' + removeBtn + '</td>';
-                    bodyEl.appendChild(row);
-                });
 
                 if (totalEl) totalEl.textContent = formatMoney(total);
             }
@@ -515,6 +584,7 @@
                             precio: result.precio,
                             cantidad: cantidadValue
                         });
+                        saveVentasPersistidas();
                         setStatus('Venta registrada. Stock actualizado: ' + result.cantidad, false);
                         clearInputs();
                         renderVentas();
@@ -536,6 +606,9 @@
                         var resumen = buildVentaResumen(ventas);
                         var response = await generarRecibo(resumen, false);
                         setReciboStatus('Recibo generado: ' + response.ruta, false);
+                        // Mantener el detalle, pero limpiar inputs para agilizar siguiente carga.
+                        clearInputs();
+                        saveVentasPersistidas();
                     } catch (err) {
                         setReciboStatus('Error al generar recibo: ' + err, true);
                     }
@@ -549,9 +622,8 @@
                         setReciboStatus('No hay ventas para finalizar.', true);
                         return;
                     }
-                    ventas = [];
-                    renderVentas();
                     setReciboStatus('Venta finalizada sin recibo.', false);
+                    clearVentas();
                 });
             }
 
@@ -567,11 +639,8 @@
                         setReciboStatus('Generando cierre del dia...', false);
                         var resumen = buildVentaResumen(ventasDia);
                         var response = await generarRecibo(resumen, true);
-                        try {
-                            localStorage.setItem('ventas_diarias', JSON.stringify([]));
-                        } catch (e) {
-                            // ignore storage errors
-                        }
+                        limpiarVentasDelDia();
+                        clearVentas();
                         setReciboStatus('Cierre generado: ' + response.ruta, false);
                     } catch (err) {
                         setReciboStatus('Error al generar cierre: ' + err, true);
@@ -582,9 +651,9 @@
             var btnLimpiar = document.getElementById('venta-limpiar');
             if (btnLimpiar) {
                 btnLimpiar.addEventListener('click', function () {
-                    ventas = [];
-                    setStatus('Listado de ventas limpiado.', false);
-                    renderVentas();
+                    clearInputs();
+                    hideSuggestions();
+                    setStatus('Campos limpiados. El listado se conserva.', false);
                 });
             }
 
@@ -613,6 +682,7 @@
                     var venta = ventas[idx];
                     ventas.splice(idx, 1);
                     eliminarVentaDelDia(venta);
+                    saveVentasPersistidas();
                     renderVentas();
                     await revertirVenta(venta);
                 });
@@ -631,6 +701,7 @@
                     if (!autorizado) return;
                     var venta = ventas.pop();
                     eliminarVentaDelDia(venta);
+                    saveVentasPersistidas();
                     renderVentas();
                     await revertirVenta(venta);
                 });
@@ -644,6 +715,7 @@
                     inventarioCache = [];
                 });
 
+            // Render inicial con ventas cargadas de localStorage
             renderVentas();
         })();
     </script>

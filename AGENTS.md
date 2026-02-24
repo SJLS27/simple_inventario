@@ -10,8 +10,7 @@ This repo is a simple desktop inventory system built with HTML/CSS/JS for the UI
 - Shared UI helpers: `src/menu/currency-toggle.js`
 - Tauri backend: `src-tauri/src/main.rs`
 - Tauri config: `src-tauri/tauri.conf.json`
-- SQLite DB: `src/database/database.db`
-- DB init script: `src/database/init_db.py`
+- SQLite DB: `src/database/database.db` (auto-creada por el backend)
 
 ## Backend commands and data flow
 - Tauri commands are defined in `src-tauri/src/main.rs` and exposed to the frontend.
@@ -20,17 +19,15 @@ This repo is a simple desktop inventory system built with HTML/CSS/JS for the UI
 - Inventario queries: `listar_inventarios`, `obtener_inventario_por_id`, `obtener_inventario_por_nombre`.
 - Stock mutations: `registrar_venta` (decrementa stock) and `registrar_compra` (incrementa stock).
 - Ventas/Compras UI uses `listar_inventarios` for autocomplete suggestions and registers stock updates via the commands above.
+- Ventas guarda las ventas del día en `localStorage` (`ventas_diarias`) y persiste el listado en curso (`ventas_en_curso`) para sobrevivir recargas del webview; el cierre del día consume `ventas_diarias`.
 - Currency display toggle uses the BCV rate stored in `localStorage` (`tasa_bcv`) and switches between USD/Bs with `currency-toggle.js`.
 - Receipt generation: `generar_recibo_ventas` produces a PDF in `Documentos/recibos/` with date-number naming; admin password is required only for day-close receipts when the session is not admin.
 - Admin password check helper: `validar_password_admin`.
 
 ## Database setup
-- Create tables (users + inventario):
-  - `python3 src/database/init_db.py`
-- Add a test user (user/user, Admin=1):
-  - `python3 src/database/init_db.py --add-user`
-- Add a test user with Admin=0:
-  - `python3 src/database/init_db.py --add-user --admin 0`
+- El backend Rust crea el archivo `src/database/database.db` si no existe y ejecuta el DDL de `users` e `inventario` al iniciar.
+- Semilla automática: si no hay usuario `user`, se inserta `user/user` con Admin=1.
+- Si necesitas reiniciar, elimina `src/database/database.db` y vuelve a lanzar la app.
 
 Note: passwords are stored in plain text in the local DB. Keep this for development only.
 
@@ -46,6 +43,6 @@ Note: passwords are stored in plain text in the local DB. Keep this for developm
 - Use Spanish identifiers for DB fields and UI labels to match existing schema.
 
 ## When changing the schema
-- Update the SQLite DDL in `src/database/init_db.py`.
+- Update the SQLite DDL in `src-tauri/src/main.rs` (función `ensure_db_initialized`).
 - Update backend queries in `src-tauri/src/main.rs`.
 - Update UI fields and labels in `src/` or `src/menu/`.

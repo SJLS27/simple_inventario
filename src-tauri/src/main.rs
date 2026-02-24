@@ -7,10 +7,13 @@ use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
 use std::env;
+use std::sync::OnceLock;
 use chrono::Local;
 use printpdf::*;
 use dirs;
 use tauri_plugin_opener;
+
+static INIT_DB: OnceLock<Result<(), String>> = OnceLock::new();
 
 fn find_db_path() -> PathBuf {
     // Prioritized candidate locations relative to current working dir or executable
@@ -42,6 +45,66 @@ fn find_db_path() -> PathBuf {
     let default = env::current_dir().unwrap_or_else(|_| PathBuf::from(".")).join("src/database/database.db");
     println!("[warn] no se encontró el archivo de base de datos en las rutas habituales; usando {}", default.display());
     default
+}
+
+fn ensure_db_initialized() -> Result<(), String> {
+    // Run once and cache result to avoid repeated DDL checks
+    let result = INIT_DB.get_or_init(|| {
+        let db_path = find_db_path();
+
+        // Ensure parent directory exists
+        if let Some(parent) = db_path.parent() {
+            if let Err(e) = fs::create_dir_all(parent) {
+                return Err(format!("No se pudo crear el directorio de la base de datos: {}", e));
+            }
+        }
+
+        let conn = Connection::open(&db_path)
+            .map_err(|e| format!("Error al abrir base de datos: {} (ruta={})", e, db_path.display()))?;
+
+        // Crear tablas si no existen
+        conn.execute_batch(
+            r#"
+            CREATE TABLE IF NOT EXISTS "users" (
+                "name" TEXT NOT NULL UNIQUE,
+                "password" TEXT NOT NULL UNIQUE,
+                "correo electronico" TEXT NOT NULL UNIQUE,
+                "Admin" INTEGER NOT NULL,
+                PRIMARY KEY("name","password","correo electronico","Admin")
+            );
+
+            CREATE TABLE IF NOT EXISTS "inventario" (
+                "id" INTEGER NOT NULL UNIQUE,
+                "nombre_producto" TEXT NOT NULL,
+                "precio_producto" TEXT NOT NULL,
+                "cantidad_producto" TEXT,
+                PRIMARY KEY("id","nombre_producto")
+            );
+            "#,
+        )
+        .map_err(|e| format!("Error al crear tablas: {}", e))?;
+
+        // Semilla: usuario admin por defecto si no existe
+        let mut stmt = conn
+            .prepare("SELECT COUNT(1) FROM users WHERE name = 'user'")
+            .map_err(|e| format!("Error al preparar verificacion de usuario: {}", e))?;
+        let count: i64 = stmt
+            .query_row([], |row| row.get(0))
+            .map_err(|e| format!("Error al consultar usuario: {}", e))?;
+
+        if count == 0 {
+            conn.execute(
+                "INSERT INTO users (name, password, \"correo electronico\", Admin) VALUES ('user', 'user', 'user@example.com', 1)",
+                [],
+            )
+            .map_err(|e| format!("Error al insertar usuario por defecto: {}", e))?;
+            println!("[info] Usuario por defecto 'user' creado.");
+        }
+
+        Ok(())
+    });
+
+    result.clone()
 }
 
 #[derive(Serialize, Deserialize)]
@@ -126,6 +189,7 @@ fn get_documentos_recibos_dir() -> Result<PathBuf, String> {
 }
 
 fn validar_admin_password(password: &str) -> Result<(), String> {
+    ensure_db_initialized()?;
     let db_path = find_db_path();
     let conn = Connection::open(&db_path)
         .map_err(|e| format!("Error al conectar: {} (ruta={})", e, db_path.display()))?;
@@ -278,6 +342,14 @@ fn crear_pdf_recibo(ventas: &[VentaItem], total: f64, titulo: &str, ruta_salida:
 
 #[tauri::command]
 fn validar_login(usuario: String, contrasena: String) -> LoginResponse {
+    if let Err(err) = ensure_db_initialized() {
+        return LoginResponse {
+            success: false,
+            message: err,
+            is_admin: false,
+        };
+    }
+
     // Determinar la ruta a la base de datos usando búsqueda de candidatos
     let db_path = find_db_path();
 
@@ -355,6 +427,7 @@ fn validar_login(usuario: String, contrasena: String) -> LoginResponse {
 
 #[tauri::command]
 fn listar_inventarios() -> Result<Vec<InventarioItem>, String> {
+    ensure_db_initialized()?;
     let db_path = find_db_path();
     let conn = Connection::open(&db_path)
         .map_err(|e| format!("Error al conectar: {} (ruta={})", e, db_path.display()))?;
@@ -387,6 +460,7 @@ fn listar_inventarios() -> Result<Vec<InventarioItem>, String> {
 
 #[tauri::command]
 fn obtener_inventario_por_id(id: i64) -> Result<InventarioItem, String> {
+    ensure_db_initialized()?;
     let db_path = find_db_path();
     let conn = Connection::open(&db_path)
         .map_err(|e| format!("Error al conectar: {} (ruta={})", e, db_path.display()))?;
@@ -396,6 +470,7 @@ fn obtener_inventario_por_id(id: i64) -> Result<InventarioItem, String> {
 
 #[tauri::command]
 fn obtener_inventario_por_nombre(nombre: String) -> Result<InventarioItem, String> {
+    ensure_db_initialized()?;
     let db_path = find_db_path();
     let conn = Connection::open(&db_path)
         .map_err(|e| format!("Error al conectar: {} (ruta={})", e, db_path.display()))?;
@@ -409,6 +484,7 @@ fn registrar_venta(id: i64, cantidad: i64) -> Result<InventarioItem, String> {
         return Err("La cantidad debe ser mayor a 0".to_string());
     }
 
+    ensure_db_initialized()?;
     let db_path = find_db_path();
     let conn = Connection::open(&db_path)
         .map_err(|e| format!("Error al conectar: {} (ruta={})", e, db_path.display()))?;
@@ -440,6 +516,7 @@ fn registrar_compra(id: i64, cantidad: i64) -> Result<InventarioItem, String> {
         return Err("La cantidad debe ser mayor a 0".to_string());
     }
 
+    ensure_db_initialized()?;
     let db_path = find_db_path();
     let conn = Connection::open(&db_path)
         .map_err(|e| format!("Error al conectar: {} (ruta={})", e, db_path.display()))?;
@@ -460,6 +537,7 @@ fn registrar_compra(id: i64, cantidad: i64) -> Result<InventarioItem, String> {
 
 #[tauri::command]
 fn generar_recibo_ventas(payload: ReciboRequest) -> Result<ReciboResponse, String> {
+    ensure_db_initialized()?;
     if payload.ventas.is_empty() {
         return Err("No hay ventas para generar el recibo".to_string());
     }
@@ -494,6 +572,7 @@ fn generar_recibo_ventas(payload: ReciboRequest) -> Result<ReciboResponse, Strin
 
 #[tauri::command]
 fn actualizar_inventario(id: i64, nombre: String, precio: f64, cantidad: i64) -> Result<(), String> {
+    ensure_db_initialized()?;
     let db_path = find_db_path();
     let conn = Connection::open(&db_path)
         .map_err(|e| format!("Error al conectar: {} (ruta={})", e, db_path.display()))?;
@@ -519,6 +598,7 @@ fn cerrar_ventana(window: tauri::Window) -> Result<(), String> {
 
 #[tauri::command]
 fn insertar_inventario(id: i64, nombre: String, precio: f64, cantidad: Option<i64>) -> Result<(), String> {
+    ensure_db_initialized()?;
     let db_path = find_db_path();
     let conn = Connection::open(&db_path)
         .map_err(|e| format!("Error al conectar: {} (ruta={})", e, db_path.display()))?;
