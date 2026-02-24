@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Usuarios</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <main class="page">
+        <header class="page-header">
+            <div>
+                <h1>Gestion de usuarios</h1>
+                <p class="subtitle">Solo accesible para tipo 1 (admin).</p>
+            </div>
+            <div class="role-chip" id="role-indicator">Tipo 0</div>
+        </header>
+
+        <section class="card">
+            <h2>Agregar usuario</h2>
+            <div class="form-grid">
+                <label class="field">
+                    Nombre de usuario
+                    <input id="user-name" type="text" placeholder="Ej: juan" autocomplete="off">
+                </label>
+                <label class="field">
+                    Correo electronico
+                    <input id="user-email" type="email" placeholder="correo@example.com" autocomplete="off">
+                </label>
+                <label class="field">
+                    Contraseña
+                    <input id="user-pass" type="password" placeholder="Minimo 3 caracteres">
+                </label>
+                <label class="field">
+                    Tipo
+                    <select id="user-admin">
+                        <option value="0">Tipo 0 (usuario)</option>
+                        <option value="1">Tipo 1 (admin)</option>
+                    </select>
+                </label>
+            </div>
+            <div class="actions">
+                <button id="btn-add-user" type="button">Agregar</button>
+                <div id="add-status" class="status"></div>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Usuarios existentes</h2>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Correo</th>
+                            <th>Tipo</th>
+                            <th class="table-actions">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-body"></tbody>
+                </table>
+            </div>
+            <div id="list-status" class="status"></div>
+        </section>
+
+        <footer class="page-footer">
+            <button id="btn-volver" type="button">Volver al menu</button>
+        </footer>
+    </main>
+
+    <script>
+        (function(){
+            function tauriInvoke(command, payload){
+                if (window.__TAURI__ && window.__TAURI__.core && typeof window.__TAURI__.core.invoke === 'function') {
+                    return window.__TAURI__.core.invoke(command, payload);
+                }
+                if (window.__TAURI__ && window.__TAURI__.tauri && typeof window.__TAURI__.tauri.invoke === 'function') {
+                    return window.__TAURI__.tauri.invoke(command, payload);
+                }
+                if (window.tauri && typeof window.tauri.invoke === 'function') {
+                    return window.tauri.invoke(command, payload);
+                }
+                var msg = 'API de Tauri no disponible. Ejecuta la app con `cargo tauri dev`.';
+                console.error(msg);
+                return Promise.reject(new Error(msg));
+            }
+
+            function getAdminFlag(){
+                try { return sessionStorage.getItem('is_admin') === '1'; }
+                catch (e) { return false; }
+            }
+
+            var isAdmin = getAdminFlag();
+            var roleEl = document.getElementById('role-indicator');
+            if (roleEl) roleEl.textContent = isAdmin ? 'Tipo 1' : 'Tipo 0';
+            if (!isAdmin){
+                document.body.innerHTML = '<main class="page"><p class="blocked">Acceso solo para administradores (tipo 1).</p><button id="btn-volver" class="btn-back" type="button">Volver</button></main>';
+                var btnVolverBlocked = document.getElementById('btn-volver');
+                if (btnVolverBlocked) btnVolverBlocked.addEventListener('click', function(){ window.location.href = '../index.html'; });
+                return;
+            }
+
+            var bodyEl = document.getElementById('users-body');
+            var listStatus = document.getElementById('list-status');
+            var addStatus = document.getElementById('add-status');
+
+            function setListStatus(msg, isError){
+                if (!listStatus) return;
+                listStatus.textContent = msg || '';
+                listStatus.style.color = isError ? '#b91c1c' : '#15803d';
+            }
+
+            function setAddStatus(msg, isError){
+                if (!addStatus) return;
+                addStatus.textContent = msg || '';
+                addStatus.style.color = isError ? '#b91c1c' : '#15803d';
+            }
+
+            function renderUsuarios(lista){
+                if (!bodyEl) return;
+                bodyEl.innerHTML = '';
+                if (!lista || !lista.length){
+                    var empty = document.createElement('tr');
+                    var td = document.createElement('td');
+                    td.colSpan = 4;
+                    td.textContent = 'Sin usuarios';
+                    empty.appendChild(td);
+                    bodyEl.appendChild(empty);
+                    return;
+                }
+
+                lista.forEach(function(u){
+                    var row = document.createElement('tr');
+                    var tdName = document.createElement('td');
+                    tdName.textContent = u.name;
+                    var tdMail = document.createElement('td');
+                    tdMail.textContent = u.correo;
+                    var tdAdmin = document.createElement('td');
+                    tdAdmin.textContent = u.admin ? 'Tipo 1 (admin)' : 'Tipo 0';
+                    var tdActions = document.createElement('td');
+                    tdActions.className = 'table-actions';
+                    var btnDel = document.createElement('button');
+                    btnDel.type = 'button';
+                    btnDel.className = 'btn-danger';
+                    btnDel.textContent = 'Eliminar';
+                    btnDel.addEventListener('click', function(){ eliminarUsuario(u.name); });
+                    tdActions.appendChild(btnDel);
+
+                    row.appendChild(tdName);
+                    row.appendChild(tdMail);
+                    row.appendChild(tdAdmin);
+                    row.appendChild(tdActions);
+                    bodyEl.appendChild(row);
+                });
+            }
+
+            async function cargarUsuarios(){
+                setListStatus('Cargando...', false);
+                try {
+                    var usuarios = await tauriInvoke('listar_usuarios');
+                    renderUsuarios(Array.isArray(usuarios) ? usuarios : []);
+                    setListStatus('Listo', false);
+                } catch (err){
+                    setListStatus('Error: ' + err, true);
+                }
+            }
+
+            async function eliminarUsuario(name){
+                var confirmed = window.confirm('Eliminar usuario ' + name + '?');
+                if (!confirmed) return;
+                try {
+                    await tauriInvoke('eliminar_usuario', { name: name });
+                    setListStatus('Usuario eliminado', false);
+                    cargarUsuarios();
+                } catch (err){
+                    setListStatus('Error al eliminar: ' + err, true);
+                }
+            }
+
+            var btnAdd = document.getElementById('btn-add-user');
+            if (btnAdd){
+                btnAdd.addEventListener('click', async function(){
+                    var name = (document.getElementById('user-name') || {}).value || '';
+                    var email = (document.getElementById('user-email') || {}).value || '';
+                    var pass = (document.getElementById('user-pass') || {}).value || '';
+                    var adminSelect = document.getElementById('user-admin');
+                    var adminValue = adminSelect ? adminSelect.value === '1' : false;
+
+                    name = String(name).trim();
+                    email = String(email).trim();
+                    pass = String(pass).trim();
+
+                    if (!name || !email || !pass){
+                        setAddStatus('Completa todos los campos', true);
+                        return;
+                    }
+
+                    try {
+                        await tauriInvoke('insertar_usuario', {
+                            name: name,
+                            password: pass,
+                            correo: email,
+                            admin: adminValue
+                        });
+                        setAddStatus('Usuario agregado', false);
+                        (document.getElementById('user-name') || {}).value = '';
+                        (document.getElementById('user-email') || {}).value = '';
+                        (document.getElementById('user-pass') || {}).value = '';
+                        if (adminSelect) adminSelect.value = '0';
+                        cargarUsuarios();
+                    } catch (err){
+                        setAddStatus('Error al agregar: ' + err, true);
+                    }
+                });
+            }
+
+            var btnVolver = document.getElementById('btn-volver');
+            if (btnVolver){
+                btnVolver.addEventListener('click', function(){
+                    window.location.href = '../index.html';
+                });
+            }
+
+            cargarUsuarios();
+        })();
+    </script>
+</body>
+</html>

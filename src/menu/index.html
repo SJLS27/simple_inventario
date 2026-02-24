@@ -41,13 +41,10 @@
             var btnUsuarios = document.getElementById('btn-usuarios');
             if (isAdmin === '1') {
                 if (statusEl) statusEl.textContent = 'Estado: Administrador';
-                if (btnUsuarios) btnUsuarios.disabled = false;
             } else if (isAdmin === '0') {
-                if (statusEl) statusEl.textContent = 'Estado: Usuario';
-                if (btnUsuarios) btnUsuarios.disabled = true;
+                if (statusEl) statusEl.textContent = 'Estado: Usuario (sin permisos para usuarios)';
             } else {
                 if (statusEl) statusEl.textContent = 'Estado: desconocido (inicia sesión)';
-                if (btnUsuarios) btnUsuarios.disabled = true;
             }
 
             // Acciones de botones simples
@@ -57,6 +54,7 @@
             if (btnVentas) btnVentas.addEventListener('click', function(){ window.location.href = 'ventas/main.html'; });
             var btnCompras = document.getElementById('btn-compras');
             if (btnCompras) btnCompras.addEventListener('click', function(){ window.location.href = 'compras/main.html'; });
+            if (btnUsuarios) btnUsuarios.addEventListener('click', function(){ window.location.href = 'usuarios/main.html'; });
             var btnAtras = document.getElementById('btn-atras');
             if (btnAtras) btnAtras.addEventListener('click', function(){
                 try { sessionStorage.clear(); } catch (e) { console.warn('No se pudo limpiar sessionStorage:', e); }

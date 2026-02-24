@@ -144,6 +144,13 @@ struct ReciboResponse {
     ruta: String,
 }
 
+#[derive(Serialize, Deserialize)]
+struct Usuario {
+    name: String,
+    correo: String,
+    admin: bool,
+}
+
 fn obtener_item_por_id(conn: &Connection, id: i64) -> Result<InventarioItem, String> {
     conn.query_row(
         "SELECT id, nombre_producto AS nombre, CAST(precio_producto AS REAL) AS precio, \
@@ -212,6 +219,15 @@ fn validar_admin_password(password: &str) -> Result<(), String> {
 #[tauri::command]
 fn validar_password_admin(password: String) -> Result<(), String> {
     validar_admin_password(password.trim())
+}
+
+fn require_admin_session() -> Result<(), String> {
+    let es_admin = leer_estado_admin().unwrap_or(false);
+    if es_admin {
+        Ok(())
+    } else {
+        Err("Se requiere una sesion de administrador.".to_string())
+    }
 }
 
 fn format_money(value: f64) -> String {
@@ -612,6 +628,85 @@ fn insertar_inventario(id: i64, nombre: String, precio: f64, cantidad: Option<i6
     Ok(())
 }
 
+#[tauri::command]
+fn listar_usuarios() -> Result<Vec<Usuario>, String> {
+    require_admin_session()?;
+    ensure_db_initialized()?;
+    let db_path = find_db_path();
+    let conn = Connection::open(&db_path)
+        .map_err(|e| format!("Error al conectar: {} (ruta={})", e, db_path.display()))?;
+
+    let mut stmt = conn
+        .prepare("SELECT name, \"correo electronico\" as correo, Admin FROM users ORDER BY name")
+        .map_err(|e| format!("Error al preparar consulta de usuarios: {}", e))?;
+
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(Usuario {
+                name: row.get(0)?,
+                correo: row.get(1)?,
+                admin: row.get::<_, i32>(2)? == 1,
+            })
+        })
+        .map_err(|e| format!("Error al leer usuarios: {}", e))?;
+
+    let mut usuarios = Vec::new();
+    for row in rows {
+        usuarios.push(row.map_err(|e| format!("Error en fila: {}", e))?);
+    }
+
+    Ok(usuarios)
+}
+
+#[tauri::command]
+fn insertar_usuario(name: String, password: String, correo: String, admin: bool) -> Result<(), String> {
+    require_admin_session()?;
+    let trimmed_name = name.trim();
+    let trimmed_pass = password.trim();
+    let trimmed_correo = correo.trim();
+
+    if trimmed_name.is_empty() || trimmed_pass.is_empty() || trimmed_correo.is_empty() {
+        return Err("Todos los campos son obligatorios".to_string());
+    }
+
+    ensure_db_initialized()?;
+    let db_path = find_db_path();
+    let conn = Connection::open(&db_path)
+        .map_err(|e| format!("Error al conectar: {} (ruta={})", e, db_path.display()))?;
+
+    conn.execute(
+        "INSERT INTO users (name, password, \"correo electronico\", Admin) VALUES (?1, ?2, ?3, ?4)",
+        rusqlite::params![trimmed_name, trimmed_pass, trimmed_correo, if admin { 1 } else { 0 }],
+    )
+    .map_err(|e| format!("Error al insertar usuario: {}", e))?;
+
+    Ok(())
+}
+
+#[tauri::command]
+fn eliminar_usuario(name: String) -> Result<(), String> {
+    require_admin_session()?;
+    let trimmed = name.trim();
+    if trimmed.is_empty() {
+        return Err("El nombre de usuario es obligatorio".to_string());
+    }
+
+    ensure_db_initialized()?;
+    let db_path = find_db_path();
+    let conn = Connection::open(&db_path)
+        .map_err(|e| format!("Error al conectar: {} (ruta={})", e, db_path.display()))?;
+
+    let affected = conn
+        .execute("DELETE FROM users WHERE name = ?1", rusqlite::params![trimmed])
+        .map_err(|e| format!("Error al eliminar usuario: {}", e))?;
+
+    if affected == 0 {
+        return Err("No se encontro el usuario".to_string());
+    }
+
+    Ok(())
+}
+
 fn crear_archivo_admin(es_admin: bool) {
     let admin_value = if es_admin { 1 } else { 0 };
     let contenido = format!("admin={}", admin_value);
@@ -656,6 +751,9 @@ fn main() {
             registrar_compra,
             generar_recibo_ventas,
             validar_password_admin,
+            listar_usuarios,
+            insertar_usuario,
+            eliminar_usuario,
             cerrar_ventana,
             greet
         ])
