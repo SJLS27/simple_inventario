@@ -12,16 +12,27 @@
             <p class="subtitle">Registra entradas de inventario desde proveedores.</p>
         </header>
 
+        <div class="rate-banner" aria-live="polite">
+            <div>
+                <span class="rate-caption">Tasa BCV:</span>
+                <strong data-rate-label>BCV</strong>
+            </div>
+            <div class="rate-amount" data-rate-value>Bs --</div>
+            <button class="rate-toggle" type="button" data-currency-toggle>Mostrar en dolares</button>
+        </div>
+
         <section class="card">
             <h2>Agregar compra</h2>
             <div class="form-grid">
-                <label>
+                <label class="field">
                     ID producto
                     <input id="compra-id" type="number" min="1" placeholder="Ej: 100">
+                    <div id="compra-sugerencias-id" class="suggestions" role="listbox"></div>
                 </label>
-                <label>
+                <label class="field">
                     Nombre
-                    <input id="compra-nombre" type="text" placeholder="Ej: Tornillo">
+                    <input id="compra-nombre" type="text" placeholder="Ej: Tornillo" autocomplete="off">
+                    <div id="compra-sugerencias" class="suggestions" role="listbox"></div>
                 </label>
                 <label>
                     Costo unitario
@@ -64,9 +75,11 @@
         </footer>
     </main>
 
+    <script src="../currency-toggle.js"></script>
     <script>
         (function () {
             var compras = [];
+            var inventarioCache = [];
             var bodyEl = document.getElementById('compras-body');
             var totalEl = document.getElementById('compras-total');
             var statusEl = document.getElementById('compra-status');
@@ -74,6 +87,23 @@
             var nombreEl = document.getElementById('compra-nombre');
             var precioEl = document.getElementById('compra-precio');
             var cantidadEl = document.getElementById('compra-cantidad');
+            var sugerenciasEl = document.getElementById('compra-sugerencias');
+            var sugerenciasIdEl = document.getElementById('compra-sugerencias-id');
+
+            function tauriInvoke(command, payload) {
+                if (window.__TAURI__ && window.__TAURI__.core && typeof window.__TAURI__.core.invoke === 'function') {
+                    return window.__TAURI__.core.invoke(command, payload);
+                }
+                if (window.__TAURI__ && window.__TAURI__.tauri && typeof window.__TAURI__.tauri.invoke === 'function') {
+                    return window.__TAURI__.tauri.invoke(command, payload);
+                }
+                if (window.tauri && typeof window.tauri.invoke === 'function') {
+                    return window.tauri.invoke(command, payload);
+                }
+                var msg = 'API de Tauri no encontrada. Ejecuta la app con `cargo tauri dev`.';
+                console.error('Tauri API missing:', msg);
+                return Promise.reject(new Error(msg));
+            }
 
             function setStatus(message, isError) {
                 if (!statusEl) return;
@@ -81,8 +111,47 @@
                 statusEl.style.color = isError ? '#b91c1c' : '#15803d';
             }
 
+            async function validarAdminParaAccion(mensaje) {
+                var isAdmin = null;
+                try {
+                    isAdmin = sessionStorage.getItem('is_admin');
+                } catch (e) {
+                    isAdmin = null;
+                }
+                if (isAdmin === '1') return true;
+
+                var password = window.prompt(mensaje);
+                if (password === null) {
+                    setStatus('Operacion cancelada.', true);
+                    return false;
+                }
+                var trimmed = String(password || '').trim();
+                if (!trimmed) {
+                    setStatus('La clave de administrador es obligatoria.', true);
+                    return false;
+                }
+
+                try {
+                    await tauriInvoke('validar_password_admin', { password: trimmed });
+                    return true;
+                } catch (err) {
+                    setStatus('Clave de administrador incorrecta.', true);
+                    return false;
+                }
+            }
+
             function formatMoney(value) {
-                return '$' + value.toFixed(2);
+                var rate = window.currencyToggle && typeof window.currencyToggle.getRate === 'function'
+                    ? window.currencyToggle.getRate()
+                    : null;
+                var currency = window.currencyToggle && typeof window.currencyToggle.getCurrency === 'function'
+                    ? window.currencyToggle.getCurrency()
+                    : 'ves';
+                if (currency === 'usd') {
+                    return '$ ' + value.toFixed(2);
+                }
+                if (!Number.isFinite(rate) || rate <= 0) return 'Bs --';
+                return 'Bs ' + (value * rate).toFixed(2);
             }
 
             function renderCompras() {
@@ -122,28 +191,171 @@
                 if (cantidadEl) cantidadEl.value = '';
             }
 
+            function normalizeValue(value) {
+                return String(value || '').trim();
+            }
+
+            function normalizeName(value) {
+                return normalizeValue(value).toLowerCase();
+            }
+
+            function applyItem(item) {
+                if (!item) return;
+                if (idEl) idEl.value = String(item.id ?? '');
+                if (nombreEl) nombreEl.value = item.nombre || '';
+                if (precioEl) precioEl.value = String(item.precio ?? '');
+            }
+
+            function hideSuggestions() {
+                if (sugerenciasEl) {
+                    sugerenciasEl.classList.remove('visible');
+                    sugerenciasEl.innerHTML = '';
+                }
+                if (sugerenciasIdEl) {
+                    sugerenciasIdEl.classList.remove('visible');
+                    sugerenciasIdEl.innerHTML = '';
+                }
+            }
+
+            function setSuggestions(targetEl, items) {
+                hideSuggestions();
+                if (!targetEl || !items.length) return;
+
+                items.slice(0, 6).forEach(function (item) {
+                    var option = document.createElement('div');
+                    option.className = 'suggestion-item';
+                    option.setAttribute('role', 'option');
+                    option.innerHTML =
+                        '<strong>' + item.nombre + '</strong>' +
+                        '<span>ID ' + item.id + ' · $' + Number(item.precio).toFixed(2) + '</span>';
+                    option.addEventListener('mousedown', function (event) {
+                        event.preventDefault();
+                        applyItem(item);
+                        hideSuggestions();
+                    });
+                    targetEl.appendChild(option);
+                });
+
+                targetEl.classList.add('visible');
+            }
+
+            function updateNameSuggestions() {
+                if (!nombreEl) return;
+                var term = normalizeName(nombreEl.value);
+                if (!term) {
+                    hideSuggestions();
+                    return;
+                }
+                var matches = inventarioCache.filter(function (item) {
+                    return normalizeName(item.nombre).includes(term) || String(item.id).includes(term);
+                });
+                setSuggestions(sugerenciasEl, matches);
+            }
+
+            function updateIdSuggestions() {
+                if (!idEl) return;
+                var term = normalizeValue(idEl.value);
+                if (!term) {
+                    hideSuggestions();
+                    return;
+                }
+                var matches = inventarioCache.filter(function (item) {
+                    return String(item.id).includes(term);
+                });
+                setSuggestions(sugerenciasIdEl, matches);
+            }
+
+            function debounce(fn, delayMs) {
+                var handle = null;
+                return function () {
+                    var args = arguments;
+                    if (handle) clearTimeout(handle);
+                    handle = setTimeout(function () {
+                        fn.apply(null, args);
+                    }, delayMs);
+                };
+            }
+
+            var debouncedNameSuggestions = debounce(updateNameSuggestions, 150);
+            var debouncedIdSuggestions = debounce(updateIdSuggestions, 150);
+
+            async function syncById(idValue) {
+                try {
+                    var item = await tauriInvoke('obtener_inventario_por_id', { id: idValue });
+                    applyItem(item);
+                } catch (err) {
+                    setStatus('No se encontro el producto por ID.', true);
+                }
+            }
+
+            async function syncByNombre(nombre) {
+                try {
+                    var item = await tauriInvoke('obtener_inventario_por_nombre', { nombre: nombre });
+                    applyItem(item);
+                } catch (err) {
+                    setStatus('No se encontro el producto por nombre.', true);
+                }
+            }
+
+            if (idEl) {
+                idEl.addEventListener('change', function () {
+                    var idValue = parseInt(normalizeValue(idEl.value), 10);
+                    if (!idValue) return;
+                    syncById(idValue);
+                });
+                idEl.addEventListener('input', debouncedIdSuggestions);
+                idEl.addEventListener('blur', function () {
+                    setTimeout(function () {
+                        hideSuggestions();
+                    }, 120);
+                });
+            }
+
+            if (nombreEl) {
+                nombreEl.addEventListener('change', function () {
+                    var nombre = normalizeValue(nombreEl.value);
+                    if (!nombre) return;
+                    syncByNombre(nombre);
+                });
+                nombreEl.addEventListener('input', debouncedNameSuggestions);
+                nombreEl.addEventListener('blur', function () {
+                    setTimeout(function () {
+                        hideSuggestions();
+                    }, 120);
+                });
+            }
+
             var btnAgregar = document.getElementById('compra-agregar');
             if (btnAgregar) {
-                btnAgregar.addEventListener('click', function () {
-                    var idValue = parseInt(String(idEl && idEl.value || '').trim(), 10);
-                    var nombre = String(nombreEl && nombreEl.value || '').trim();
-                    var precioValue = parseFloat(String(precioEl && precioEl.value || '').trim());
-                    var cantidadValue = parseInt(String(cantidadEl && cantidadEl.value || '').trim(), 10);
+                btnAgregar.addEventListener('click', async function () {
+                    var idValue = parseInt(normalizeValue(idEl && idEl.value), 10);
+                    var precioValue = parseFloat(normalizeValue(precioEl && precioEl.value));
+                    var cantidadValue = parseInt(normalizeValue(cantidadEl && cantidadEl.value), 10);
 
-                    if (!idValue || !nombre || Number.isNaN(precioValue) || Number.isNaN(cantidadValue) || cantidadValue <= 0) {
+                    if (!idValue || Number.isNaN(precioValue) || Number.isNaN(cantidadValue) || cantidadValue <= 0) {
                         setStatus('Completa todos los campos correctamente.', true);
                         return;
                     }
 
-                    compras.push({
-                        id: idValue,
-                        nombre: nombre,
-                        precio: precioValue,
-                        cantidad: cantidadValue
-                    });
-                    setStatus('Compra agregada.', false);
-                    clearInputs();
-                    renderCompras();
+                    try {
+                        var autorizado = await validarAdminParaAccion('Se requiere clave de administrador para registrar la compra.');
+                        if (!autorizado) return;
+                        var result = await tauriInvoke('registrar_compra', {
+                            id: idValue,
+                            cantidad: cantidadValue
+                        });
+                        compras.push({
+                            id: result.id,
+                            nombre: result.nombre,
+                            precio: precioValue,
+                            cantidad: cantidadValue
+                        });
+                        setStatus('Compra registrada. Stock actualizado: ' + result.cantidad, false);
+                        clearInputs();
+                        renderCompras();
+                    } catch (err) {
+                        setStatus('Error al registrar compra: ' + err, true);
+                    }
                 });
             }
 
@@ -162,6 +374,23 @@
                     window.location.href = '../index.html';
                 });
             }
+
+            var currencyToggleBtn = document.querySelector('[data-currency-toggle]');
+            if (currencyToggleBtn) {
+                currencyToggleBtn.addEventListener('click', function () {
+                    setTimeout(function () {
+                        renderCompras();
+                    }, 0);
+                });
+            }
+
+            tauriInvoke('listar_inventarios')
+                .then(function (items) {
+                    inventarioCache = Array.isArray(items) ? items : [];
+                })
+                .catch(function () {
+                    inventarioCache = [];
+                });
 
             renderCompras();
         })();

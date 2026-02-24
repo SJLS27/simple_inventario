@@ -12,16 +12,27 @@
             <p class="subtitle">Registra salidas de inventario y calcula el total.</p>
         </header>
 
+        <div class="rate-banner" aria-live="polite">
+            <div>
+                <span class="rate-caption">Tasa BCV:</span>
+                <strong data-rate-label>BCV</strong>
+            </div>
+            <div class="rate-amount" data-rate-value>Bs --</div>
+            <button class="rate-toggle" type="button" data-currency-toggle>Mostrar en dolares</button>
+        </div>
+
         <section class="card">
             <h2>Agregar venta</h2>
             <div class="form-grid">
-                <label>
+                <label class="field">
                     ID producto
                     <input id="venta-id" type="number" min="1" placeholder="Ej: 100">
+                    <div id="venta-sugerencias-id" class="suggestions" role="listbox"></div>
                 </label>
-                <label>
+                <label class="field">
                     Nombre
-                    <input id="venta-nombre" type="text" placeholder="Ej: Tornillo">
+                    <input id="venta-nombre" type="text" placeholder="Ej: Tornillo" autocomplete="off">
+                    <div id="venta-sugerencias" class="suggestions" role="listbox"></div>
                 </label>
                 <label>
                     Precio unitario
@@ -49,6 +60,7 @@
                         <th>Precio</th>
                         <th>Cantidad</th>
                         <th>Subtotal</th>
+                        <th class="table-actions">Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="ventas-body"></tbody>
@@ -57,6 +69,20 @@
                 <span>Total:</span>
                 <strong id="ventas-total">$0.00</strong>
             </div>
+            <div class="actions actions-inline">
+                <button id="btn-deshacer-venta" class="btn-secondary" type="button">Deshacer ultima venta</button>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Recibos</h2>
+            <p class="help">Los recibos se guardan en Documentos/recibos con formato fecha-numero.</p>
+            <div class="actions">
+                <button id="btn-vender" type="button">Vender</button>
+                <button id="btn-recibo-cliente" type="button">Generar recibo cliente</button>
+                <button id="btn-recibo-cierre" class="btn-secondary" type="button">Generar cierre del dia</button>
+            </div>
+            <div id="recibo-status" class="status"></div>
         </section>
 
         <footer class="page-footer">
@@ -64,16 +90,36 @@
         </footer>
     </main>
 
+    <script src="../currency-toggle.js"></script>
     <script>
         (function () {
             var ventas = [];
+            var inventarioCache = [];
             var bodyEl = document.getElementById('ventas-body');
             var totalEl = document.getElementById('ventas-total');
             var statusEl = document.getElementById('venta-status');
+            var reciboStatusEl = document.getElementById('recibo-status');
             var idEl = document.getElementById('venta-id');
             var nombreEl = document.getElementById('venta-nombre');
             var precioEl = document.getElementById('venta-precio');
             var cantidadEl = document.getElementById('venta-cantidad');
+            var sugerenciasEl = document.getElementById('venta-sugerencias');
+            var sugerenciasIdEl = document.getElementById('venta-sugerencias-id');
+
+            function tauriInvoke(command, payload) {
+                if (window.__TAURI__ && window.__TAURI__.core && typeof window.__TAURI__.core.invoke === 'function') {
+                    return window.__TAURI__.core.invoke(command, payload);
+                }
+                if (window.__TAURI__ && window.__TAURI__.tauri && typeof window.__TAURI__.tauri.invoke === 'function') {
+                    return window.__TAURI__.tauri.invoke(command, payload);
+                }
+                if (window.tauri && typeof window.tauri.invoke === 'function') {
+                    return window.tauri.invoke(command, payload);
+                }
+                var msg = 'API de Tauri no encontrada. Ejecuta la app con `cargo tauri dev`.';
+                console.error('Tauri API missing:', msg);
+                return Promise.reject(new Error(msg));
+            }
 
             function setStatus(message, isError) {
                 if (!statusEl) return;
@@ -81,8 +127,155 @@
                 statusEl.style.color = isError ? '#b91c1c' : '#15803d';
             }
 
+            function setReciboStatus(message, isError) {
+                if (!reciboStatusEl) return;
+                reciboStatusEl.textContent = message;
+                reciboStatusEl.style.color = isError ? '#b91c1c' : '#15803d';
+            }
+
             function formatMoney(value) {
-                return '$' + value.toFixed(2);
+                var rate = window.currencyToggle && typeof window.currencyToggle.getRate === 'function'
+                    ? window.currencyToggle.getRate()
+                    : null;
+                var currency = window.currencyToggle && typeof window.currencyToggle.getCurrency === 'function'
+                    ? window.currencyToggle.getCurrency()
+                    : 'ves';
+                if (currency === 'usd') {
+                    return '$ ' + value.toFixed(2);
+                }
+                if (!Number.isFinite(rate) || rate <= 0) return 'Bs --';
+                return 'Bs ' + (value * rate).toFixed(2);
+            }
+
+            function buildVentaResumen(sourceVentas) {
+                var items = (sourceVentas || []).map(function (venta) {
+                    var subtotal = venta.precio * venta.cantidad;
+                    return {
+                        id: venta.id,
+                        nombre: venta.nombre,
+                        precio: venta.precio,
+                        cantidad: venta.cantidad,
+                        subtotal: subtotal
+                    };
+                });
+                var total = items.reduce(function (acc, item) { return acc + item.subtotal; }, 0);
+                return {
+                    items: items,
+                    total: total
+                };
+            }
+
+            function isSameLocalDay(dateString, referenceDate) {
+                var parsed = new Date(dateString);
+                if (Number.isNaN(parsed.getTime())) return false;
+                return parsed.getFullYear() === referenceDate.getFullYear() &&
+                    parsed.getMonth() === referenceDate.getMonth() &&
+                    parsed.getDate() === referenceDate.getDate();
+            }
+
+            async function obtenerVentasDelDia() {
+                try {
+                    var data = localStorage.getItem('ventas_diarias');
+                    if (!data) return [];
+                    var parsed = JSON.parse(data);
+                    if (!Array.isArray(parsed)) return [];
+                    var today = new Date();
+                    var filtered = parsed.filter(function (item) {
+                        return item && typeof item.fecha === 'string' && isSameLocalDay(item.fecha, today);
+                    });
+                    if (filtered.length !== parsed.length) {
+                        try {
+                            localStorage.setItem('ventas_diarias', JSON.stringify(filtered));
+                        } catch (e) {
+                            // ignore storage errors
+                        }
+                    }
+                    return filtered;
+                } catch (e) {
+                    return [];
+                }
+            }
+
+            function guardarVentaEnDia(venta) {
+                var payload = {
+                    id: venta.id,
+                    nombre: venta.nombre,
+                    precio: venta.precio,
+                    cantidad: venta.cantidad,
+                    fecha: new Date().toISOString()
+                };
+                try {
+                    var data = localStorage.getItem('ventas_diarias');
+                    var parsed = data ? JSON.parse(data) : [];
+                    if (!Array.isArray(parsed)) parsed = [];
+                    parsed.push(payload);
+                    localStorage.setItem('ventas_diarias', JSON.stringify(parsed));
+                } catch (e) {
+                    // ignore storage errors
+                }
+            }
+
+            async function solicitarPasswordAdminSiNecesario(requierePassword) {
+                if (!requierePassword) return null;
+                var isAdmin = null;
+                try {
+                    isAdmin = sessionStorage.getItem('is_admin');
+                } catch (e) {
+                    isAdmin = null;
+                }
+                if (isAdmin === '1') return null;
+
+                var password = window.prompt('Se requiere clave de administrador para el cierre del dia.');
+                if (password === null) {
+                    throw new Error('Operacion cancelada.');
+                }
+                var trimmed = String(password || '').trim();
+                if (!trimmed) {
+                    throw new Error('La clave de administrador es obligatoria.');
+                }
+                return trimmed;
+            }
+
+            async function validarAdminParaAccion(mensaje) {
+                var isAdmin = null;
+                try {
+                    isAdmin = sessionStorage.getItem('is_admin');
+                } catch (e) {
+                    isAdmin = null;
+                }
+                if (isAdmin === '1') return true;
+
+                var password = window.prompt(mensaje);
+                if (password === null) {
+                    setStatus('Operacion cancelada.', true);
+                    return false;
+                }
+                var trimmed = String(password || '').trim();
+                if (!trimmed) {
+                    setStatus('La clave de administrador es obligatoria.', true);
+                    return false;
+                }
+
+                try {
+                    await tauriInvoke('validar_password_admin', { password: trimmed });
+                    return true;
+                } catch (err) {
+                    setStatus('Clave de administrador incorrecta.', true);
+                    return false;
+                }
+            }
+
+            async function generarRecibo(payload, isCierreDia) {
+                var adminPassword = await solicitarPasswordAdminSiNecesario(isCierreDia);
+                var commandPayload = {
+                    ventas: payload.items,
+                    total: payload.total,
+                    es_cierre_dia: isCierreDia
+                };
+                if (adminPassword) {
+                    commandPayload.admin_password = adminPassword;
+                }
+                return tauriInvoke('generar_recibo_ventas', { payload: commandPayload });
             }
 
             function renderVentas() {
@@ -91,28 +284,65 @@
                 if (!ventas.length) {
                     var emptyRow = document.createElement('tr');
                     var emptyCell = document.createElement('td');
-                    emptyCell.colSpan = 5;
+                    emptyCell.colSpan = 6;
                     emptyCell.textContent = 'No hay ventas registradas.';
                     emptyRow.appendChild(emptyCell);
                     bodyEl.appendChild(emptyRow);
                 }
 
                 var total = 0;
-                ventas.forEach(function (venta) {
+                ventas.forEach(function (venta, index) {
                     var row = document.createElement('tr');
                     var subtotal = venta.precio * venta.cantidad;
                     total += subtotal;
+                    var removeBtn = '<button type="button" class="btn-danger" data-idx="' + index + '">Eliminar</button>';
 
                     row.innerHTML =
                         '<td>' + venta.id + '</td>' +
                         '<td>' + venta.nombre + '</td>' +
                         '<td>' + formatMoney(venta.precio) + '</td>' +
                         '<td>' + venta.cantidad + '</td>' +
-                        '<td>' + formatMoney(subtotal) + '</td>';
+                        '<td>' + formatMoney(subtotal) + '</td>' +
+                        '<td class="table-actions">' + removeBtn + '</td>';
                     bodyEl.appendChild(row);
                 });
 
                 if (totalEl) totalEl.textContent = formatMoney(total);
+            }
+
+            async function revertirVenta(venta) {
+                if (!venta) return;
+                try {
+                    var result = await tauriInvoke('registrar_compra', {
+                        id: venta.id,
+                        cantidad: venta.cantidad
+                    });
+                    setStatus('Venta deshecha. Stock actualizado: ' + result.cantidad, false);
+                } catch (err) {
+                    setStatus('Error al deshacer venta: ' + err, true);
+                }
+            }
+
+            function eliminarVentaDelDia(venta) {
+                try {
+                    var data = localStorage.getItem('ventas_diarias');
+                    if (!data) return;
+                    var parsed = JSON.parse(data);
+                    if (!Array.isArray(parsed)) return;
+                    var updated = parsed;
+                    var index = parsed.findIndex(function (item) {
+                        return item && item.id === venta.id &&
+                            item.nombre === venta.nombre &&
+                            Number(item.precio) === Number(venta.precio) &&
+                            Number(item.cantidad) === Number(venta.cantidad);
+                    });
+                    if (index !== -1) {
+                        updated = parsed.slice(0, index).concat(parsed.slice(index + 1));
+                    }
+                    localStorage.setItem('ventas_diarias', JSON.stringify(updated));
+                } catch (e) {
+                    // ignore storage errors
+                }
             }
 
             function clearInputs() {
@@ -122,28 +352,230 @@
                 if (cantidadEl) cantidadEl.value = '';
             }
 
+            function normalizeValue(value) {
+                return String(value || '').trim();
+            }
+
+            function normalizeName(value) {
+                return normalizeValue(value).toLowerCase();
+            }
+
+            function applyItem(item) {
+                if (!item) return;
+                if (idEl) idEl.value = String(item.id ?? '');
+                if (nombreEl) nombreEl.value = item.nombre || '';
+                if (precioEl) precioEl.value = String(item.precio ?? '');
+            }
+
+            function hideSuggestions() {
+                if (sugerenciasEl) {
+                    sugerenciasEl.classList.remove('visible');
+                    sugerenciasEl.innerHTML = '';
+                }
+                if (sugerenciasIdEl) {
+                    sugerenciasIdEl.classList.remove('visible');
+                    sugerenciasIdEl.innerHTML = '';
+                }
+            }
+
+            function setSuggestions(targetEl, items) {
+                hideSuggestions();
+                if (!targetEl || !items.length) return;
+
+                items.slice(0, 6).forEach(function (item) {
+                    var option = document.createElement('div');
+                    option.className = 'suggestion-item';
+                    option.setAttribute('role', 'option');
+                    option.innerHTML =
+                        '<strong>' + item.nombre + '</strong>' +
+                        '<span>ID ' + item.id + ' · $' + Number(item.precio).toFixed(2) + '</span>';
+                    option.addEventListener('mousedown', function (event) {
+                        event.preventDefault();
+                        applyItem(item);
+                        hideSuggestions();
+                    });
+                    targetEl.appendChild(option);
+                });
+
+                targetEl.classList.add('visible');
+            }
+
+            function updateNameSuggestions() {
+                if (!nombreEl) return;
+                var term = normalizeName(nombreEl.value);
+                if (!term) {
+                    hideSuggestions();
+                    return;
+                }
+                var matches = inventarioCache.filter(function (item) {
+                    return normalizeName(item.nombre).includes(term) || String(item.id).includes(term);
+                });
+                setSuggestions(sugerenciasEl, matches);
+            }
+
+            function updateIdSuggestions() {
+                if (!idEl) return;
+                var term = normalizeValue(idEl.value);
+                if (!term) {
+                    hideSuggestions();
+                    return;
+                }
+                var matches = inventarioCache.filter(function (item) {
+                    return String(item.id).includes(term);
+                });
+                setSuggestions(sugerenciasIdEl, matches);
+            }
+
+            function debounce(fn, delayMs) {
+                var handle = null;
+                return function () {
+                    var args = arguments;
+                    if (handle) clearTimeout(handle);
+                    handle = setTimeout(function () {
+                        fn.apply(null, args);
+                    }, delayMs);
+                };
+            }
+
+            var debouncedNameSuggestions = debounce(updateNameSuggestions, 150);
+            var debouncedIdSuggestions = debounce(updateIdSuggestions, 150);
+
+            async function syncById(idValue) {
+                try {
+                    var item = await tauriInvoke('obtener_inventario_por_id', { id: idValue });
+                    applyItem(item);
+                } catch (err) {
+                    setStatus('No se encontro el producto por ID.', true);
+                }
+            }
+
+            async function syncByNombre(nombre) {
+                try {
+                    var item = await tauriInvoke('obtener_inventario_por_nombre', { nombre: nombre });
+                    applyItem(item);
+                } catch (err) {
+                    setStatus('No se encontro el producto por nombre.', true);
+                }
+            }
+
+            if (idEl) {
+                idEl.addEventListener('change', function () {
+                    var idValue = parseInt(normalizeValue(idEl.value), 10);
+                    if (!idValue) return;
+                    syncById(idValue);
+                });
+                idEl.addEventListener('input', debouncedIdSuggestions);
+                idEl.addEventListener('blur', function () {
+                    setTimeout(function () {
+                        hideSuggestions();
+                    }, 120);
+                });
+            }
+
+            if (nombreEl) {
+                nombreEl.addEventListener('change', function () {
+                    var nombre = normalizeValue(nombreEl.value);
+                    if (!nombre) return;
+                    syncByNombre(nombre);
+                });
+                nombreEl.addEventListener('input', debouncedNameSuggestions);
+                nombreEl.addEventListener('blur', function () {
+                    setTimeout(function () {
+                        hideSuggestions();
+                    }, 120);
+                });
+            }
+
             var btnAgregar = document.getElementById('venta-agregar');
             if (btnAgregar) {
-                btnAgregar.addEventListener('click', function () {
-                    var idValue = parseInt(String(idEl && idEl.value || '').trim(), 10);
-                    var nombre = String(nombreEl && nombreEl.value || '').trim();
-                    var precioValue = parseFloat(String(precioEl && precioEl.value || '').trim());
-                    var cantidadValue = parseInt(String(cantidadEl && cantidadEl.value || '').trim(), 10);
+                btnAgregar.addEventListener('click', async function () {
+                    var idValue = parseInt(normalizeValue(idEl && idEl.value), 10);
+                    var precioValue = parseFloat(normalizeValue(precioEl && precioEl.value));
+                    var cantidadValue = parseInt(normalizeValue(cantidadEl && cantidadEl.value), 10);
 
-                    if (!idValue || !nombre || Number.isNaN(precioValue) || Number.isNaN(cantidadValue) || cantidadValue <= 0) {
+                    if (!idValue || Number.isNaN(precioValue) || Number.isNaN(cantidadValue) || cantidadValue <= 0) {
                         setStatus('Completa todos los campos correctamente.', true);
                         return;
                     }
 
-                    ventas.push({
-                        id: idValue,
-                        nombre: nombre,
-                        precio: precioValue,
-                        cantidad: cantidadValue
-                    });
-                    setStatus('Venta agregada.', false);
-                    clearInputs();
+                    try {
+                        var result = await tauriInvoke('registrar_venta', {
+                            id: idValue,
+                            cantidad: cantidadValue
+                        });
+                        ventas.push({
+                            id: result.id,
+                            nombre: result.nombre,
+                            precio: result.precio,
+                            cantidad: cantidadValue
+                        });
+                        guardarVentaEnDia({
+                            id: result.id,
+                            nombre: result.nombre,
+                            precio: result.precio,
+                            cantidad: cantidadValue
+                        });
+                        setStatus('Venta registrada. Stock actualizado: ' + result.cantidad, false);
+                        clearInputs();
+                        renderVentas();
+                    } catch (err) {
+                        setStatus('Error al registrar venta: ' + err, true);
+                    }
+                });
+            }
+
+            var btnReciboCliente = document.getElementById('btn-recibo-cliente');
+            if (btnReciboCliente) {
+                btnReciboCliente.addEventListener('click', async function () {
+                    if (!ventas.length) {
+                        setReciboStatus('No hay ventas para generar el recibo.', true);
+                        return;
+                    }
+                    try {
+                        setReciboStatus('Generando recibo...', false);
+                        var resumen = buildVentaResumen(ventas);
+                        var response = await generarRecibo(resumen, false);
+                        setReciboStatus('Recibo generado: ' + response.ruta, false);
+                    } catch (err) {
+                        setReciboStatus('Error al generar recibo: ' + err, true);
+                    }
+                });
+            }
+
+            var btnVender = document.getElementById('btn-vender');
+            if (btnVender) {
+                btnVender.addEventListener('click', function () {
+                    if (!ventas.length) {
+                        setReciboStatus('No hay ventas para finalizar.', true);
+                        return;
+                    }
+                    ventas = [];
                     renderVentas();
+                    setReciboStatus('Venta finalizada sin recibo.', false);
+                });
+            }
+
+            var btnReciboCierre = document.getElementById('btn-recibo-cierre');
+            if (btnReciboCierre) {
+                btnReciboCierre.addEventListener('click', async function () {
+                    try {
+                        var ventasDia = await obtenerVentasDelDia();
+                        if (!ventasDia.length) {
+                            setReciboStatus('No hay ventas del dia para el cierre.', true);
+                            return;
+                        }
+                        setReciboStatus('Generando cierre del dia...', false);
+                        var resumen = buildVentaResumen(ventasDia);
+                        var response = await generarRecibo(resumen, true);
+                        try {
+                            localStorage.setItem('ventas_diarias', JSON.stringify([]));
+                        } catch (e) {
+                            // ignore storage errors
+                        }
+                        setReciboStatus('Cierre generado: ' + response.ruta, false);
+                    } catch (err) {
+                        setReciboStatus('Error al generar cierre: ' + err, true);
+                    }
                 });
             }
 
@@ -162,6 +594,55 @@
                     window.location.href = '../index.html';
                 });
             }
+
+            var currencyToggleBtn = document.querySelector('[data-currency-toggle]');
+            if (currencyToggleBtn) {
+                currencyToggleBtn.addEventListener('click', function () {
+                    setTimeout(function () {
+                        renderVentas();
+                    }, 0);
+                });
+            }
+
+            if (bodyEl) {
+                bodyEl.addEventListener('click', async function (event) {
+                    var target = event.target;
+                    if (!target || !target.matches('button[data-idx]')) return;
+                    var idx = parseInt(target.getAttribute('data-idx'), 10);
+                    if (Number.isNaN(idx) || idx < 0 || idx >= ventas.length) return;
+                    var venta = ventas[idx];
+                    ventas.splice(idx, 1);
+                    eliminarVentaDelDia(venta);
+                    renderVentas();
+                    await revertirVenta(venta);
+                });
+            }
+
+            var btnDeshacer = document.getElementById('btn-deshacer-venta');
+            if (btnDeshacer) {
+                btnDeshacer.addEventListener('click', async function () {
+                    if (!ventas.length) {
+                        setStatus('No hay ventas para deshacer.', true);
+                        return;
+                    }
+                    var confirmed = window.confirm('Deseas deshacer la ultima venta?');
+                    if (!confirmed) return;
+                    var autorizado = await validarAdminParaAccion('Se requiere clave de administrador para deshacer la venta.');
+                    if (!autorizado) return;
+                    var venta = ventas.pop();
+                    eliminarVentaDelDia(venta);
+                    renderVentas();
+                    await revertirVenta(venta);
+                });
+            }
+
+            tauriInvoke('listar_inventarios')
+                .then(function (items) {
+                    inventarioCache = Array.isArray(items) ? items : [];
+                })
+                .catch(function () {
+                    inventarioCache = [];
+                });
 
             renderVentas();
         })();

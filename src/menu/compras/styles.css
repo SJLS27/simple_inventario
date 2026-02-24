@@ -23,6 +23,51 @@ body {
     margin-bottom: 24px;
 }
 
+.rate-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 18px;
+    border-radius: 14px;
+    background: #0f172a;
+    color: #f8fafc;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.25);
+    margin-bottom: 24px;
+}
+
+.rate-caption {
+    font-size: 0.85rem;
+    color: rgba(248, 250, 252, 0.7);
+    margin-right: 6px;
+}
+
+.rate-amount {
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: #38bdf8;
+}
+
+.rate-toggle {
+    border: none;
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-weight: 700;
+    cursor: pointer;
+    background: #38bdf8;
+    color: #0f172a;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rate-toggle:active {
+    transform: translateY(0);
+}
+
+.rate-toggle:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(56, 189, 248, 0.3);
+}
+
 .page-header h1 {
     font-size: 2.2rem;
     color: #14532d;
@@ -59,6 +104,7 @@ label {
     gap: 6px;
     font-weight: 600;
     color: #1f2937;
+    position: relative;
 }
 
 input {
@@ -66,6 +112,44 @@ input {
     border-radius: 10px;
     border: 1px solid #bbf7d0;
     font-size: 0.95rem;
+}
+
+.suggestions {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 16px 30px rgba(20, 83, 45, 0.12);
+    padding: 6px;
+    display: none;
+    z-index: 10;
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+.suggestions.visible {
+    display: block;
+}
+
+.suggestion-item {
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.suggestion-item span {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #4d7c0f;
+}
+
+.suggestion-item:hover {
+    background: #dcfce7;
 }
 
 .actions {
@@ -137,5 +221,10 @@ th {
 
     .actions {
         flex-direction: column;
+    }
+
+    .rate-banner {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }

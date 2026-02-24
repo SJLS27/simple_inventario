@@ -19,6 +19,59 @@ body {
     margin-bottom: 24px;
 }
 
+.rate-panel {
+    background: #0f172a;
+    color: #f8fafc;
+    border-radius: 14px;
+    padding: 12px 16px;
+    min-width: 180px;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.25);
+}
+
+.rate-panel-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(248, 250, 252, 0.7);
+    margin-bottom: 6px;
+}
+
+.rate-panel-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #38bdf8;
+}
+
+.rate-panel-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 0.8rem;
+    color: rgba(248, 250, 252, 0.7);
+}
+
+.rate-toggle {
+    border: none;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-weight: 700;
+    cursor: pointer;
+    background: #38bdf8;
+    color: #0f172a;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rate-toggle:active {
+    transform: translateY(0);
+}
+
+.rate-toggle:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(56, 189, 248, 0.3);
+}
+
 .page-header h1 {
     font-size: 1.8rem;
     margin-bottom: 6px;
@@ -170,4 +223,15 @@ body {
 
 .page-footer button:last-child {
     background-color: #6b7280;
+}
+
+@media (max-width: 900px) {
+    .page-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .rate-panel {
+        align-self: flex-start;
+    }
 }

@@ -9,6 +9,12 @@ body {
     font-family: sans-serif;
 }
 
+:root {
+    --rate-card-bg: #0f172a;
+    --rate-card-text: #f8fafc;
+    --rate-card-accent: #38bdf8;
+}
+
 /* Dock en la izquierda */
 form {
     position: fixed;
@@ -24,6 +30,59 @@ form {
     padding: 20px 0;
     gap: 10px;
 }
+
+.rate-card {
+    width: 80%;
+    background: var(--rate-card-bg);
+    color: var(--rate-card-text);
+    border-radius: 16px;
+    padding: 16px 14px;
+    text-align: center;
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.25);
+    margin-bottom: 6px;
+}
+
+.rate-title {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(248, 250, 252, 0.7);
+    margin-bottom: 6px;
+}
+
+.rate-value {
+    font-size: 2.1rem;
+    font-weight: 800;
+    color: var(--rate-card-accent);
+}
+
+.rate-label {
+    font-size: 0.85rem;
+    margin-top: 4px;
+    color: rgba(248, 250, 252, 0.7);
+}
+
+.rate-inputs {
+    display: grid;
+    gap: 8px;
+    width: 80%;
+    margin-bottom: 8px;
+}
+
+.rate-inputs label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.rate-inputs input {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    margin-top: 4px;
+}
+
 
 
 
@@ -55,6 +114,23 @@ button:active {
     transform: scale(0.95);
 }
 
+button.rate-toggle {
+    width: 80%;
+    height: 44px;
+    background: #0ea5e9;
+    color: #ffffff;
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+button.rate-toggle:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(14, 165, 233, 0.3);
+}
+
 /* Boton Compras verde */
 #btn-compras {
     background-color: #16a34a;
@@ -65,20 +141,29 @@ button:active {
 }
 
 /* Botón Atrás naranja y abajo */
-button:nth-child(5) {
+#btn-atras {
     background-color: #ff9800;
     margin-top: auto;
 }
 
-button:nth-child(5):hover {
+#btn-atras:hover {
     background-color: #e68900;
 }
 
 /* Botón Cerrar rojo */
-button:last-child {
+#btn-cerrar {
     background-color: #dc3545;
 }
 
-button:last-child:hover {
+#btn-cerrar:hover {
     background-color: #c82333;
+}
+
+/* Botón Usuarios naranja */
+#btn-usuarios {
+    background-color: #ff9800;
+}
+
+#btn-usuarios:hover {
+    background-color: #e68900;
 }

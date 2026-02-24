@@ -6,7 +6,8 @@ This repo is a simple desktop inventory system built with HTML/CSS/JS for the UI
 
 ## Architecture map
 - Frontend (static): `src/index.html`, `src/main.js`, `src/styles.css`
-- Menu pages: `src/menu/` (subfolders `inventario/`, `ventas/`)
+- Menu pages: `src/menu/` (subfolders `inventario/`, `ventas/`, `compras/`)
+- Shared UI helpers: `src/menu/currency-toggle.js`
 - Tauri backend: `src-tauri/src/main.rs`
 - Tauri config: `src-tauri/tauri.conf.json`
 - SQLite DB: `src/database/database.db`
@@ -16,6 +17,12 @@ This repo is a simple desktop inventory system built with HTML/CSS/JS for the UI
 - Tauri commands are defined in `src-tauri/src/main.rs` and exposed to the frontend.
 - The backend connects to SQLite and reads/writes `users` and `inventario` tables.
 - DB lookup uses a fallback search for the DB file; the canonical path is `src/database/database.db`.
+- Inventario queries: `listar_inventarios`, `obtener_inventario_por_id`, `obtener_inventario_por_nombre`.
+- Stock mutations: `registrar_venta` (decrementa stock) and `registrar_compra` (incrementa stock).
+- Ventas/Compras UI uses `listar_inventarios` for autocomplete suggestions and registers stock updates via the commands above.
+- Currency display toggle uses the BCV rate stored in `localStorage` (`tasa_bcv`) and switches between USD/Bs with `currency-toggle.js`.
+- Receipt generation: `generar_recibo_ventas` produces a PDF in `Documentos/recibos/` with date-number naming; admin password is required only for day-close receipts when the session is not admin.
+- Admin password check helper: `validar_password_admin`.
 
 ## Database setup
 - Create tables (users + inventario):

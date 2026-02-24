@@ -33,6 +33,20 @@ function createCell(text, className) {
     return td;
 }
 
+function formatPrecio(value) {
+    const rate = window.currencyToggle && typeof window.currencyToggle.getRate === 'function'
+        ? window.currencyToggle.getRate()
+        : null;
+    const currency = window.currencyToggle && typeof window.currencyToggle.getCurrency === 'function'
+        ? window.currencyToggle.getCurrency()
+        : 'ves';
+    if (currency === 'usd') {
+        return '$ ' + Number(value).toFixed(2);
+    }
+    if (!Number.isFinite(rate) || rate <= 0) return 'Bs --';
+    return 'Bs ' + (Number(value) * rate).toFixed(2);
+}
+
 function createInputCell(value, type, disabled) {
     const td = document.createElement('td');
     const input = document.createElement('input');
@@ -154,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 row.appendChild(cantidadCell.td);
             } else {
                 row.appendChild(createCell(item.nombre));
-                row.appendChild(createCell(item.precio));
+                row.appendChild(createCell(formatPrecio(item.precio)));
                 row.appendChild(createCell(item.cantidad));
             }
 
@@ -187,6 +201,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnRecargar) {
         btnRecargar.addEventListener('click', () => {
             cargarInventarios();
+        });
+    }
+
+    if (window.currencyToggle && typeof window.currencyToggle.update === 'function') {
+        document.querySelectorAll('[data-currency-toggle]').forEach((button) => {
+            button.addEventListener('click', () => {
+                setTimeout(() => {
+                    renderTable(filterInventarios(normalizeValue(searchInput?.value)));
+                }, 0);
+            });
         });
     }
 

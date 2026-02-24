@@ -11,6 +11,14 @@
             <h1>Inventario</h1>
             <div id="role-indicator" class="role-indicator"></div>
         </div>
+        <div class="rate-panel" aria-live="polite">
+            <div class="rate-panel-label">Tasa BCV</div>
+            <div class="rate-panel-value" data-rate-value>Bs --</div>
+            <div class="rate-panel-footer">
+                <span data-rate-label>BCV</span>
+                <button class="rate-toggle" type="button" data-currency-toggle>Mostrar en dolares</button>
+            </div>
+        </div>
         <div class="search-wrapper">
             <label for="search" class="search-label">Buscar por ID o nombre</label>
             <input id="search" type="search" placeholder="Ej: 102 o Tornillo">
@@ -62,6 +70,7 @@
         <button id="btn-recargar" type="button">Recargar</button>
     </footer>
 
+    <script src="../currency-toggle.js"></script>
     <script src="main.js"></script>
 </body>
 </html>
