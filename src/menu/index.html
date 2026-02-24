@@ -10,6 +10,7 @@
         <h2>Menú</h2>
         <button id="btn-inventario" type="button" title="Inventario">Inventario</button>
         <button id="btn-ventas" type="button" title="Ventas">Ventas</button>
+        <button id="btn-compras" type="button" title="Compras">Compras</button>
         <button id="btn-usuarios" type="button" title="Usuarios">Usuarios</button>
         <button id="btn-atras" type="button" title="Atrás">Atrás</button>
         <button id="btn-cerrar" type="button" title="Cerrar">Cerrar</button>
@@ -42,6 +43,8 @@
             if (btnInventario) btnInventario.addEventListener('click', function(){ window.location.href = 'inventario/index.html'; });
             var btnVentas = document.getElementById('btn-ventas');
             if (btnVentas) btnVentas.addEventListener('click', function(){ window.location.href = 'ventas/main.html'; });
+            var btnCompras = document.getElementById('btn-compras');
+            if (btnCompras) btnCompras.addEventListener('click', function(){ window.location.href = 'compras/main.html'; });
             var btnAtras = document.getElementById('btn-atras');
             if (btnAtras) btnAtras.addEventListener('click', function(){
                 try { sessionStorage.clear(); } catch (e) { console.warn('No se pudo limpiar sessionStorage:', e); }

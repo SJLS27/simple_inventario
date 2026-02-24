@@ -1,10 +1,170 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <title>Ventas</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div>Ventas</div>
+    <main class="page">
+        <header class="page-header">
+            <h1>Ventas</h1>
+            <p class="subtitle">Registra salidas de inventario y calcula el total.</p>
+        </header>
+
+        <section class="card">
+            <h2>Agregar venta</h2>
+            <div class="form-grid">
+                <label>
+                    ID producto
+                    <input id="venta-id" type="number" min="1" placeholder="Ej: 100">
+                </label>
+                <label>
+                    Nombre
+                    <input id="venta-nombre" type="text" placeholder="Ej: Tornillo">
+                </label>
+                <label>
+                    Precio unitario
+                    <input id="venta-precio" type="number" step="0.01" min="0" placeholder="Ej: 12.50">
+                </label>
+                <label>
+                    Cantidad
+                    <input id="venta-cantidad" type="number" step="1" min="1" placeholder="Ej: 2">
+                </label>
+            </div>
+            <div class="actions">
+                <button id="venta-agregar" type="button">Agregar venta</button>
+                <button id="venta-limpiar" class="btn-secondary" type="button">Limpiar</button>
+            </div>
+            <div id="venta-status" class="status"></div>
+        </section>
+
+        <section class="card">
+            <h2>Detalle de ventas</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Precio</th>
+                        <th>Cantidad</th>
+                        <th>Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody id="ventas-body"></tbody>
+            </table>
+            <div class="total">
+                <span>Total:</span>
+                <strong id="ventas-total">$0.00</strong>
+            </div>
+        </section>
+
+        <footer class="page-footer">
+            <button id="btn-volver" type="button">Volver al menu</button>
+        </footer>
+    </main>
+
+    <script>
+        (function () {
+            var ventas = [];
+            var bodyEl = document.getElementById('ventas-body');
+            var totalEl = document.getElementById('ventas-total');
+            var statusEl = document.getElementById('venta-status');
+            var idEl = document.getElementById('venta-id');
+            var nombreEl = document.getElementById('venta-nombre');
+            var precioEl = document.getElementById('venta-precio');
+            var cantidadEl = document.getElementById('venta-cantidad');
+
+            function setStatus(message, isError) {
+                if (!statusEl) return;
+                statusEl.textContent = message;
+                statusEl.style.color = isError ? '#b91c1c' : '#15803d';
+            }
+
+            function formatMoney(value) {
+                return '$' + value.toFixed(2);
+            }
+
+            function renderVentas() {
+                if (!bodyEl) return;
+                bodyEl.innerHTML = '';
+                if (!ventas.length) {
+                    var emptyRow = document.createElement('tr');
+                    var emptyCell = document.createElement('td');
+                    emptyCell.colSpan = 5;
+                    emptyCell.textContent = 'No hay ventas registradas.';
+                    emptyRow.appendChild(emptyCell);
+                    bodyEl.appendChild(emptyRow);
+                }
+
+                var total = 0;
+                ventas.forEach(function (venta) {
+                    var row = document.createElement('tr');
+                    var subtotal = venta.precio * venta.cantidad;
+                    total += subtotal;
+
+                    row.innerHTML =
+                        '<td>' + venta.id + '</td>' +
+                        '<td>' + venta.nombre + '</td>' +
+                        '<td>' + formatMoney(venta.precio) + '</td>' +
+                        '<td>' + venta.cantidad + '</td>' +
+                        '<td>' + formatMoney(subtotal) + '</td>';
+                    bodyEl.appendChild(row);
+                });
+
+                if (totalEl) totalEl.textContent = formatMoney(total);
+            }
+
+            function clearInputs() {
+                if (idEl) idEl.value = '';
+                if (nombreEl) nombreEl.value = '';
+                if (precioEl) precioEl.value = '';
+                if (cantidadEl) cantidadEl.value = '';
+            }
+
+            var btnAgregar = document.getElementById('venta-agregar');
+            if (btnAgregar) {
+                btnAgregar.addEventListener('click', function () {
+                    var idValue = parseInt(String(idEl && idEl.value || '').trim(), 10);
+                    var nombre = String(nombreEl && nombreEl.value || '').trim();
+                    var precioValue = parseFloat(String(precioEl && precioEl.value || '').trim());
+                    var cantidadValue = parseInt(String(cantidadEl && cantidadEl.value || '').trim(), 10);
+
+                    if (!idValue || !nombre || Number.isNaN(precioValue) || Number.isNaN(cantidadValue) || cantidadValue <= 0) {
+                        setStatus('Completa todos los campos correctamente.', true);
+                        return;
+                    }
+
+                    ventas.push({
+                        id: idValue,
+                        nombre: nombre,
+                        precio: precioValue,
+                        cantidad: cantidadValue
+                    });
+                    setStatus('Venta agregada.', false);
+                    clearInputs();
+                    renderVentas();
+                });
+            }
+
+            var btnLimpiar = document.getElementById('venta-limpiar');
+            if (btnLimpiar) {
+                btnLimpiar.addEventListener('click', function () {
+                    ventas = [];
+                    setStatus('Listado de ventas limpiado.', false);
+                    renderVentas();
+                });
+            }
+
+            var btnVolver = document.getElementById('btn-volver');
+            if (btnVolver) {
+                btnVolver.addEventListener('click', function () {
+                    window.location.href = '../index.html';
+                });
+            }
+
+            renderVentas();
+        })();
+    </script>
 </body>
 </html>

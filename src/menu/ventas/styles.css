@@ -1,0 +1,141 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "Trebuchet MS", "Lucida Sans", Arial, sans-serif;
+    background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+    color: #0f172a;
+}
+
+.page {
+    max-width: 960px;
+    margin: 40px auto;
+    padding: 0 24px 60px;
+}
+
+.page-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.page-header h1 {
+    font-size: 2.2rem;
+    color: #1e3a8a;
+}
+
+.subtitle {
+    color: #475569;
+    max-width: 520px;
+}
+
+.card {
+    background: #ffffff;
+    padding: 20px 24px;
+    border-radius: 16px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+    margin-bottom: 24px;
+}
+
+.card h2 {
+    margin-bottom: 16px;
+    font-size: 1.2rem;
+    color: #1e293b;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+input {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #cbd5f5;
+    font-size: 0.95rem;
+}
+
+.actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+button {
+    border: none;
+    border-radius: 12px;
+    padding: 10px 18px;
+    font-weight: 700;
+    cursor: pointer;
+    background: #2563eb;
+    color: #ffffff;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.25);
+}
+
+.btn-secondary {
+    background: #e2e8f0;
+    color: #1e293b;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+th,
+td {
+    text-align: left;
+    padding: 10px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+th {
+    color: #1e40af;
+}
+
+.total {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+    font-size: 1.1rem;
+}
+
+.status {
+    margin-top: 12px;
+    font-weight: 600;
+}
+
+.page-footer {
+    display: flex;
+    justify-content: flex-start;
+}
+
+@media (max-width: 720px) {
+    .page {
+        margin: 24px auto;
+    }
+
+    .actions {
+        flex-direction: column;
+    }
+}

@@ -1,10 +1,170 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <title>Compras</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div>Compras</div>
+    <main class="page">
+        <header class="page-header">
+            <h1>Compras</h1>
+            <p class="subtitle">Registra entradas de inventario desde proveedores.</p>
+        </header>
+
+        <section class="card">
+            <h2>Agregar compra</h2>
+            <div class="form-grid">
+                <label>
+                    ID producto
+                    <input id="compra-id" type="number" min="1" placeholder="Ej: 100">
+                </label>
+                <label>
+                    Nombre
+                    <input id="compra-nombre" type="text" placeholder="Ej: Tornillo">
+                </label>
+                <label>
+                    Costo unitario
+                    <input id="compra-precio" type="number" step="0.01" min="0" placeholder="Ej: 9.50">
+                </label>
+                <label>
+                    Cantidad
+                    <input id="compra-cantidad" type="number" step="1" min="1" placeholder="Ej: 10">
+                </label>
+            </div>
+            <div class="actions">
+                <button id="compra-agregar" type="button">Agregar compra</button>
+                <button id="compra-limpiar" class="btn-secondary" type="button">Limpiar</button>
+            </div>
+            <div id="compra-status" class="status"></div>
+        </section>
+
+        <section class="card">
+            <h2>Detalle de compras</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Costo</th>
+                        <th>Cantidad</th>
+                        <th>Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody id="compras-body"></tbody>
+            </table>
+            <div class="total">
+                <span>Total:</span>
+                <strong id="compras-total">$0.00</strong>
+            </div>
+        </section>
+
+        <footer class="page-footer">
+            <button id="btn-volver" type="button">Volver al menu</button>
+        </footer>
+    </main>
+
+    <script>
+        (function () {
+            var compras = [];
+            var bodyEl = document.getElementById('compras-body');
+            var totalEl = document.getElementById('compras-total');
+            var statusEl = document.getElementById('compra-status');
+            var idEl = document.getElementById('compra-id');
+            var nombreEl = document.getElementById('compra-nombre');
+            var precioEl = document.getElementById('compra-precio');
+            var cantidadEl = document.getElementById('compra-cantidad');
+
+            function setStatus(message, isError) {
+                if (!statusEl) return;
+                statusEl.textContent = message;
+                statusEl.style.color = isError ? '#b91c1c' : '#15803d';
+            }
+
+            function formatMoney(value) {
+                return '$' + value.toFixed(2);
+            }
+
+            function renderCompras() {
+                if (!bodyEl) return;
+                bodyEl.innerHTML = '';
+                if (!compras.length) {
+                    var emptyRow = document.createElement('tr');
+                    var emptyCell = document.createElement('td');
+                    emptyCell.colSpan = 5;
+                    emptyCell.textContent = 'No hay compras registradas.';
+                    emptyRow.appendChild(emptyCell);
+                    bodyEl.appendChild(emptyRow);
+                }
+
+                var total = 0;
+                compras.forEach(function (compra) {
+                    var row = document.createElement('tr');
+                    var subtotal = compra.precio * compra.cantidad;
+                    total += subtotal;
+
+                    row.innerHTML =
+                        '<td>' + compra.id + '</td>' +
+                        '<td>' + compra.nombre + '</td>' +
+                        '<td>' + formatMoney(compra.precio) + '</td>' +
+                        '<td>' + compra.cantidad + '</td>' +
+                        '<td>' + formatMoney(subtotal) + '</td>';
+                    bodyEl.appendChild(row);
+                });
+
+                if (totalEl) totalEl.textContent = formatMoney(total);
+            }
+
+            function clearInputs() {
+                if (idEl) idEl.value = '';
+                if (nombreEl) nombreEl.value = '';
+                if (precioEl) precioEl.value = '';
+                if (cantidadEl) cantidadEl.value = '';
+            }
+
+            var btnAgregar = document.getElementById('compra-agregar');
+            if (btnAgregar) {
+                btnAgregar.addEventListener('click', function () {
+                    var idValue = parseInt(String(idEl && idEl.value || '').trim(), 10);
+                    var nombre = String(nombreEl && nombreEl.value || '').trim();
+                    var precioValue = parseFloat(String(precioEl && precioEl.value || '').trim());
+                    var cantidadValue = parseInt(String(cantidadEl && cantidadEl.value || '').trim(), 10);
+
+                    if (!idValue || !nombre || Number.isNaN(precioValue) || Number.isNaN(cantidadValue) || cantidadValue <= 0) {
+                        setStatus('Completa todos los campos correctamente.', true);
+                        return;
+                    }
+
+                    compras.push({
+                        id: idValue,
+                        nombre: nombre,
+                        precio: precioValue,
+                        cantidad: cantidadValue
+                    });
+                    setStatus('Compra agregada.', false);
+                    clearInputs();
+                    renderCompras();
+                });
+            }
+
+            var btnLimpiar = document.getElementById('compra-limpiar');
+            if (btnLimpiar) {
+                btnLimpiar.addEventListener('click', function () {
+                    compras = [];
+                    setStatus('Listado de compras limpiado.', false);
+                    renderCompras();
+                });
+            }
+
+            var btnVolver = document.getElementById('btn-volver');
+            if (btnVolver) {
+                btnVolver.addEventListener('click', function () {
+                    window.location.href = '../index.html';
+                });
+            }
+
+            renderCompras();
+        })();
+    </script>
 </body>
 </html>

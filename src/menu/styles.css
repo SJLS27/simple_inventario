@@ -55,13 +55,22 @@ button:active {
     transform: scale(0.95);
 }
 
+/* Boton Compras verde */
+#btn-compras {
+    background-color: #16a34a;
+}
+
+#btn-compras:hover {
+    background-color: #15803d;
+}
+
 /* Botón Atrás naranja y abajo */
-button:nth-child(4) {
+button:nth-child(5) {
     background-color: #ff9800;
     margin-top: auto;
 }
 
-button:nth-child(4):hover {
+button:nth-child(5):hover {
     background-color: #e68900;
 }
 
