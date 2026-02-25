@@ -7,6 +7,17 @@
 <span style="color: #98FB98;">#     |_____/|_____|_|  |_|_|    |______|______| |_____|_| \_|   \/   |______|_| \_|  |_|  \____/|_|  \_\ |_|   </span>
 </pre>                                                                                                           
 
+## 📸 Screenshots | Capturas
+
+| English | Español |
+| --- | --- |
+| **Login**<br>![Login screen](assets/login.png) | **Inicio de sesión**<br>![Pantalla de inicio de sesión](assets/login.png) |
+| **Main menu**<br>![Main menu](assets/menu-principal.png) | **Menú principal**<br>![Menú principal](assets/menu-principal.png) |
+| **Inventory**<br>![Inventory view](assets/inventario.png) | **Inventario**<br>![Vista de inventario](assets/inventario.png) |
+| **Purchases**<br>![Purchases module](assets/compras.png) | **Compras**<br>![Módulo de compras](assets/compras.png) |
+| **Sales**<br>![Sales module](assets/ventas.png) | **Ventas**<br>![Módulo de ventas](assets/ventas.png) |
+| **User management**<br>![User management](assets/usuarios.png) | **Gestión de usuarios**<br>![Gestión de usuarios](assets/usuarios.png) |
+
 ## 📦 Acerca del Proyecto
 
 Este es un sistema de inventario simple, rápido y seguro. La interfaz de usuario está construida con **HTML** puro para mantenerla ligera, mientras que toda la lógica de negocio, el acceso a datos y el procesamiento se ejecutan en el backend usando **Rust**. Todo esto está empaquetado en una aplicación de escritorio nativa gracias a **Tauri**.
