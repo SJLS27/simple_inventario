@@ -18,25 +18,25 @@
 | **Sales**<br>![Sales module](assets/ventas.png) | **Ventas**<br>![Módulo de ventas](assets/ventas.png) |
 | **User management**<br>![User management](assets/usuarios.png) | **Gestión de usuarios**<br>![Gestión de usuarios](assets/usuarios.png) |
 
-## 📦 Acerca del Proyecto
+## 📦 About the Project | Acerca del Proyecto
 
-Este es un sistema de inventario simple, rápido y seguro. La interfaz de usuario está construida con **HTML** puro para mantenerla ligera, mientras que toda la lógica de negocio, el acceso a datos y el procesamiento se ejecutan en el backend usando **Rust**. Todo esto está empaquetado en una aplicación de escritorio nativa gracias a **Tauri**.
+| English | Español |
+| --- | --- |
+| This is a simple, fast, and secure inventory system. The UI is built with **HTML** to keep it lightweight, while all business logic, data access, and processing run on the backend using **Rust**. Everything is packaged into a native desktop app thanks to **Tauri**. | Este es un sistema de inventario simple, rápido y seguro. La interfaz de usuario está construida con **HTML** puro para mantenerla ligera, mientras que toda la lógica de negocio, el acceso a datos y el procesamiento se ejecutan en el backend usando **Rust**. Todo esto está empaquetado en una aplicación de escritorio nativa gracias a **Tauri**. |
 
-## ✨ Características Principales
+## ✨ Key Features | Características Principales
 
-* **Rendimiento Nativo:** El motor en Rust garantiza una ejecución ultrarrápida y un consumo mínimo de memoria RAM.
-* **Almacenamiento Local (Offline-first):** Los datos se guardan de forma segura en tu máquina mediante una base de datos **SQLite** integrada. No requiere conexión a internet.
-* **Interfaz Minimalista:** Un diseño en HTML limpio y sin complicaciones para gestionar tu inventario sin distracciones.
-* **Multiplataforma:** Listo para ser compilado y ejecutado en Windows, macOS y Linux.
+| English | Español |
+| --- | --- |
+| **Native performance:** Rust engine ensures ultra-fast execution and minimal RAM use.<br>**Local storage (offline-first):** Data is safely stored on your machine with integrated **SQLite**. No internet required.<br>**Minimalist UI:** Clean **HTML** design to manage your inventory without distractions.<br>**Cross-platform:** Ready to build and run on Windows, macOS, and Linux. | **Rendimiento nativo:** El motor en Rust garantiza una ejecución ultrarrápida y un consumo mínimo de RAM.<br>**Almacenamiento local (offline-first):** Los datos se guardan de forma segura en tu máquina con **SQLite** integrado. No requiere internet.<br>**Interfaz minimalista:** Diseño en **HTML** limpio para gestionar el inventario sin distracciones.<br>**Multiplataforma:** Listo para compilar y ejecutar en Windows, macOS y Linux. |
 
-## 🚀 Requisitos Previos
+## 🚀 Prerequisites | Requisitos Previos
 
-Antes de clonar y ejecutar el proyecto, asegúrate de tener instalado tu entorno de desarrollo:
+| English | Español |
+| --- | --- |
+| Set up your dev environment before running:<br>- [Rust (and Cargo)](https://www.rust-lang.org/tools/install)<br>- [System dependencies for Tauri](https://tauri.app/v1/guides/getting-started/prerequisites) (varies by OS: C++ Build Tools on Windows, `webkit2gtk` on Linux, etc.) | Antes de clonar y ejecutar, instala:<br>- [Rust (y Cargo)](https://www.rust-lang.org/tools/install)<br>- [Dependencias del sistema para Tauri](https://tauri.app/v1/guides/getting-started/prerequisites) (varía según tu SO: C++ Build Tools en Windows, `webkit2gtk` en Linux, etc.) |
 
-* [Rust (y Cargo)](https://www.rust-lang.org/tools/install)
-* [Dependencias del sistema para Tauri](https://tauri.app/v1/guides/getting-started/prerequisites) (Varía según tu sistema operativo: C++ Build Tools en Windows, `webkit2gtk` en Linux, etc.)
-
-## Este proyecto corre gracias a las tecnologias:
+## 🛠️ Tecnologías | Technologies
 
 <div align="center">
   <pre style="background-color: transparent; border: none; font-size: 16px; font-family: monospace;">
